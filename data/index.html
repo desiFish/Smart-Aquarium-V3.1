@@ -1,0 +1,2129 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Aquarium Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#33afff">
+    <link rel="icon" type="image/x-icon" href="/favicon.jpg">
+    <style>
+        body {
+            background: #121212;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px 20px 40px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .container {
+            background: #1e1e1e;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            display: none;
+        }
+
+        .slider {
+            position: absolute;
+            inset: 0;
+            background: #333;
+            transition: .4s;
+            border-radius: 34px;
+            cursor: pointer;
+        }
+
+        .slider:before {
+            content: "";
+            position: absolute;
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background: #2196F3;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(26px);
+        }
+
+        #status {
+            margin: 1rem 0;
+            font-size: 1.2rem;
+            color: #888;
+        }
+
+        .time-controls {
+            display: none;
+            background: #252525;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .time-controls.active {
+            display: block;
+        }
+
+        .time-input {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            width: 120px;
+        }
+
+        .disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .mode-selector {
+            background: #252525;
+            padding: 4px;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .mode-selector input[type="radio"] {
+            display: none;
+        }
+
+        .mode-selector label {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+
+        .mode-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #333;
+            transition: all 0.3s;
+        }
+
+        .mode-indicator.active {
+            background: #4CAF50;
+            box-shadow: 0 0 6px #4CAF50;
+        }
+
+        .mode-selector input[type="radio"]:checked+label {
+            background: #2196F3;
+            color: white;
+        }
+
+        .control-panel {
+            display: none;
+            margin-top: 1rem;
+            background: #252525;
+            padding: 1.2rem;
+            border-radius: 8px;
+        }
+
+        .control-panel.active {
+            display: block;
+        }
+
+        #timerControl,
+        #autoControl {
+            background: #252525;
+            padding: 1.2rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        #autoControl_1,
+        #autoControl_2,
+        #autoControl_3,
+        #autoControl_4 {
+            text-align: center;
+        }
+
+        #autoControl_1 div,
+        #autoControl_2 div,
+        #autoControl_3 div,
+        #autoControl_4 div {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        #autoControl_1 label,
+        #autoControl_2 label,
+        #autoControl_3 label,
+        #autoControl_4 label {
+            min-width: 80px;
+            text-align: right;
+        }
+
+        #autoControl div,
+        #timerControl div {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        select {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 5px;
+            width: 120px;
+            margin: 0;
+        }
+
+        .btn-set {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.3s;
+            margin: 15px auto 0;
+            display: block;
+        }
+
+        .btn-set:hover {
+            background: #1976D2;
+        }
+
+        .status-monitor {
+            background: #252525;
+            padding: 0.8rem;
+            border-radius: 8px;
+            margin: 0 0 1rem 0;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: #666;
+        }
+
+        .status-indicator.on {
+            background: #4CAF50;
+            box-shadow: 0 0 10px #4CAF50;
+        }
+
+        .status-indicator.off {
+            background: #666;
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .switch-label {
+            color: #888;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            width: 100%;
+            padding: 0 60px;
+            box-sizing: border-box;
+        }
+
+        .connection-status {
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            position: absolute;
+            right: 0;
+        }
+
+        .connection-status.online {
+            background: #1b5e20;
+            color: #4CAF50;
+        }
+
+        .connection-status.offline {
+            background: #b71c1c;
+            color: #ff5252;
+        }
+
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .connection-status.online .connection-dot {
+            background: #4CAF50;
+            box-shadow: 0 0 8px #4CAF50;
+        }
+
+        .connection-status.offline .connection-dot {
+            background: #ff5252;
+            box-shadow: 0 0 8px #ff5252;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .page-header {
+            background: #1e1e1e;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            margin-bottom: 1rem;
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .controls-container {
+            background: #1e1e1e;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+
+        .page-title {
+            color: #2196F3;
+            font-size: 2rem;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            flex: 1;
+            text-align: center;
+        }
+
+        .disable-control {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #333;
+            text-align: center;
+        }
+
+        .disable-control .switch-label {
+            color: #888;
+        }
+
+        .disable-control .switch-label:first-child {
+            color: #4CAF50;
+            /* Green for ENABLED */
+        }
+
+        .disable-control .switch-label:last-child {
+            color: #ff5252;
+            /* Red for DISABLED */
+        }
+
+        .disable-control .slider {
+            background: #4CAF50;
+            /* Green background for enabled state */
+        }
+
+        .disable-control input:checked+.slider {
+            background: #b71c1c;
+            /* Red background for disabled state */
+        }
+
+        @media (max-width: 600px) {
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 0;
+            }
+
+            .connection-status {
+                position: static;
+                margin-top: 0.5rem;
+            }
+
+            .page-title {
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .controls-container {
+            max-width: none;
+            margin: 0;
+        }
+
+        .led-title {
+            color: #2196F3;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        #timerControl_1,
+        #timerControl_2,
+        #timerControl_3,
+        #timerControl_4 {
+            text-align: center;
+        }
+
+        #timerControl_1 div,
+        #timerControl_2 div,
+        #timerControl_3 div,
+        #timerControl_4 div {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        #timerControl_1 label,
+        #timerControl_2 label,
+        #timerControl_3 label,
+        #timerControl_4 label {
+
+            text-align: right;
+        }
+
+        select {
+            flex: 0 1 120px;
+            margin: 0;
+        }
+
+        .timer-switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 1rem auto;
+            width: auto;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+            flex: none;
+        }
+
+        .switch-label {
+            color: #888;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            flex: none;
+        }
+
+        /* Timer Control Styles */
+        .timer-switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 1rem;
+        }
+
+        .timer-switch-container .switch {
+            width: 60px;
+            height: 34px;
+            margin: 0;
+            flex: none;
+        }
+
+        .timer-switch-container .switch-label {
+            color: #888;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            flex: none;
+            margin: 0;
+        }
+
+        .version-footer {
+            margin-top: auto;
+            width: 100%;
+            font-size: 0.7rem;
+            color: #666;
+            text-align: center;
+            background: #121212;
+            padding: 4px 0;
+            border-top: 1px solid #252525;
+        }
+
+        .navbar {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: center;
+            padding: 8px;
+            background: #1e1e1e;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-btn {
+            background: #252525;
+            color: #2196F3;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .nav-btn:hover {
+            background: #2196F3;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        /* Timer Animation Styles */
+        .timer-animation {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .timer-animation.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .timer-countdown {
+            font-size: 1.2rem;
+            color: #2196F3;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .timer-controls {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            width: 100%;
+            transition: opacity 0.3s;
+        }
+
+        .timer-controls.hidden {
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+        }
+
+        #timerControl_1,
+        #timerControl_2,
+        #timerControl_3,
+        #timerControl_4 {
+            position: relative;
+            min-height: 80px;
+        }
+
+        /* Toggle Mode Styles */
+        #toggleControl_1,
+        #toggleControl_2,
+        #toggleControl_3,
+        #toggleControl_4 {
+            text-align: center;
+            padding: 1.5rem;
+        }
+
+        .toggle-input-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .toggle-input-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toggle-input-container label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
+            margin-bottom: 0.25rem;
+        }
+
+        .toggle-timer {
+            font-size: 1.2rem;
+            color: #2196F3;
+            margin: 1rem 0;
+            padding: 0.5rem;
+            background: #1e1e1e;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .toggle-timer.active {
+            display: block;
+        }
+
+        /* Additional responsive styles */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px 10px 30px;
+            }
+
+            .grid-container {
+                gap: 10px;
+            }
+
+            .controls-container {
+                padding: 1rem;
+            }
+
+            .mode-selector {
+                flex-wrap: wrap;
+            }
+
+            .mode-selector label {
+                padding: 6px 12px;
+                font-size: 0.9rem;
+            }
+
+            .toggle-input-group {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .time-input {
+                width: 100px;
+            }
+
+            select {
+                width: 100px;
+            }
+
+            .timer-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .timer-controls label {
+                text-align: center;
+            }
+
+            .page-title {
+                font-size: 1.5rem;
+            }
+
+            .navbar {
+                padding: 4px;
+            }
+
+            .nav-btn {
+                padding: 8px 16px;
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .mode-selector label {
+                padding: 4px 8px;
+                font-size: 0.8rem;
+            }
+
+            .led-title {
+                font-size: 1rem;
+            }
+
+            .switch-container {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .timer-switch-container {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page-header">
+        <div class="header">
+            <h2 class="page-title">Smart Aquarium V3.1</h2>
+            <div id="connectionStatus" class="connection-status offline">
+                <span class="connection-dot"></span>
+                <span>Offline</span>
+            </div>
+        </div>
+    </div>
+
+    <nav class="navbar">
+        <button class="nav-btn" onclick="window.location.href='settings.html'">Settings</button>
+    </nav>
+
+    <div class="grid-container">
+        <div id="led1" class="controls-container">
+            <h3 class="led-title" id="ledName_1">LED 1</h3>
+            <div class="status-monitor">
+                <span class="status-indicator"></span>
+                <span id="liveStatus_1">Checking LED status...</span>
+            </div>
+
+            <div class="mode-selector">
+                <input type="radio" id="modeManual_1" name="mode_1" value="manual" checked>
+                <label for="modeManual_1"><span class="mode-indicator"></span>Manual</label>
+                <input type="radio" id="modeAuto_1" name="mode_1" value="auto">
+                <label for="modeAuto_1"><span class="mode-indicator"></span>Auto</label>
+                <input type="radio" id="modeTimer_1" name="mode_1" value="timer">
+                <label for="modeTimer_1"><span class="mode-indicator"></span>Timer</label>
+                <input type="radio" id="modeToggle_1" name="mode_1" value="toggle">
+                <label for="modeToggle_1"><span class="mode-indicator"></span>Toggle</label>
+            </div>
+
+            <div id="manualControl_1" class="control-panel active">
+                <div class="switch-container">
+                    <span class="switch-label">OFF</span>
+                    <label class="switch">
+                        <input type="checkbox" id="ledToggle_1">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">ON</span>
+                </div>
+            </div>
+
+            <div id="autoControl_1" class="control-panel">
+                <div>
+                    <label>ON Time:</label>
+                    <input type="time" id="onTime_1" class="time-input">
+                </div>
+                <div>
+                    <label>OFF Time:</label>
+                    <input type="time" id="offTime_1" class="time-input">
+                </div>
+                <button id="setTime_1" class="btn-set">Set Schedule</button>
+            </div>
+
+            <div id="timerControl_1" class="control-panel">
+                <div class="timer-controls">
+                    <label>Timer Duration:</label>
+                    <select id="timerDuration_1" onchange="updateTimerToggle(1)">
+                        <option value="0">No Timer</option>
+                        <option value="60">1 minute</option>
+                        <option value="300">5 minutes</option>
+                        <option value="600">10 minutes</option>
+                        <option value="900">15 minutes</option>
+                        <option value="1800">30 minutes</option>
+                        <option value="2700">45 minutes</option>
+                    </select>
+                </div>
+                <div id="timerSwitchContainer_1" class="timer-switch-container">
+                    <span class="switch-label">OFF</span>
+                    <label class="switch">
+                        <input type="checkbox" id="timerToggle_1">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">ON</span>
+                </div>
+                <div id="timerAnimation_1" class="timer-animation">
+                    <div id="timerCountdown_1" class="timer-countdown">00:00</div>
+                </div>
+            </div>
+
+            <div id="toggleControl_1" class="control-panel">
+                <div class="toggle-input-group">
+                    <div class="toggle-input-container">
+                        <label>ON Minutes</label>
+                        <input type="number" id="toggleOnMinutes_1" min="1" max="1440" class="time-input">
+                    </div>
+                    <div class="toggle-input-container">
+                        <label>OFF Minutes</label>
+                        <input type="number" id="toggleOffMinutes_1" min="1" max="1440" class="time-input">
+                    </div>
+                </div>
+                <div class="switch-container">
+                    <span class="switch-label">OFF</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggleModeSwitch_1">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">ON</span>
+                </div>
+                <div id="toggleTimer_1" class="toggle-timer">Next switch in: 00:00</div>
+            </div>
+
+            <div class="disable-control">
+                <div class="switch-container">
+                    <span class="switch-label">ENABLED</span>
+                    <label class="switch">
+                        <input type="checkbox" id="disableToggle_1">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">DISABLED</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="led2" class="controls-container">
+            <h3 class="led-title" id="ledName_2">LED 2</h3>
+            <div class="status-monitor">
+                <span class="status-indicator"></span>
+                <span id="liveStatus_2">Checking LED status...</span>
+            </div>
+
+            <div class="mode-selector">
+                <input type="radio" id="modeManual_2" name="mode_2" value="manual" checked>
+                <label for="modeManual_2"><span class="mode-indicator"></span>Manual</label>
+                <input type="radio" id="modeAuto_2" name="mode_2" value="auto">
+                <label for="modeAuto_2"><span class="mode-indicator"></span>Auto</label>
+                <input type="radio" id="modeTimer_2" name="mode_2" value="timer">
+                <label for="modeTimer_2"><span class="mode-indicator"></span>Timer</label>
+                <input type="radio" id="modeToggle_2" name="mode_2" value="toggle">
+                <label for="modeToggle_2"><span class="mode-indicator"></span>Toggle</label>
+            </div>
+
+            <div id="manualControl_2" class="control-panel active">
+                <div class="switch-container">
+                    <span class="switch-label">OFF</span>
+                    <label class="switch">
+                        <input type="checkbox" id="ledToggle_2">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">ON</span>
+                </div>
+            </div>
+
+            <div id="autoControl_2" class="control-panel">
+                <div>
+                    <label>ON Time:</label>
+                    <input type="time" id="onTime_2" class="time-input">
+                </div>
+                <div>
+                    <label>OFF Time:</label>
+                    <input type="time" id="offTime_2" class="time-input">
+                </div>
+                <button id="setTime_2" class="btn-set">Set Schedule</button>
+            </div>
+
+            <div id="timerControl_2" class="control-panel">
+                <div class="timer-controls">
+                    <label>Timer Duration:</label>
+                    <select id="timerDuration_2" onchange="updateTimerToggle(2)">
+                        <option value="0">No Timer</option>
+                        <option value="60">1 minute</option>
+                        <option value="300">5 minutes</option>
+                        <option value="600">10 minutes</option>
+                        <option value="900">15 minutes</option>
+                        <option value="1800">30 minutes</option>
+                        <option value="2700">45 minutes</option>
+                    </select>
+                </div>
+                <div id="timerSwitchContainer_2" class="timer-switch-container">
+                    <span class="switch-label">OFF</span>
+                    <label class="switch">
+                        <input type="checkbox" id="timerToggle_2">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">ON</span>
+                </div>
+                <div id="timerAnimation_2" class="timer-animation">
+                    <div id="timerCountdown_2" class="timer-countdown">00:00</div>
+                </div>
+            </div>
+
+            <div id="toggleControl_2" class="control-panel">
+                <div class="toggle-input-group">
+                    <div class="toggle-input-container">
+                        <label>ON Minutes</label>
+                        <input type="number" id="toggleOnMinutes_2" min="1" max="1440" class="time-input">
+                    </div>
+                    <div class="toggle-input-container">
+                        <label>OFF Minutes</label>
+                        <input type="number" id="toggleOffMinutes_2" min="1" max="1440" class="time-input">
+                    </div>
+                </div>
+                <div class="switch-container">
+                    <span class="switch-label">OFF</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggleModeSwitch_2">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">ON</span>
+                </div>
+                <div id="toggleTimer_2" class="toggle-timer">Next switch in: 00:00</div>
+            </div>
+
+            <div class="disable-control">
+                <div class="switch-container">
+                    <span class="switch-label">ENABLED</span>
+                    <label class="switch">
+                        <input type="checkbox" id="disableToggle_2">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">DISABLED</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="led3" class="controls-container">
+            <h3 class="led-title" id="ledName_3">LED 3</h3>
+            <div class="status-monitor">
+                <span class="status-indicator"></span>
+                <span id="liveStatus_3">Checking LED status...</span>
+            </div>
+
+            <div class="mode-selector">
+                <input type="radio" id="modeManual_3" name="mode_3" value="manual" checked>
+                <label for="modeManual_3"><span class="mode-indicator"></span>Manual</label>
+                <input type="radio" id="modeAuto_3" name="mode_3" value="auto">
+                <label for="modeAuto_3"><span class="mode-indicator"></span>Auto</label>
+                <input type="radio" id="modeTimer_3" name="mode_3" value="timer">
+                <label for="modeTimer_3"><span class="mode-indicator"></span>Timer</label>
+                <input type="radio" id="modeToggle_3" name="mode_3" value="toggle">
+                <label for="modeToggle_3"><span class="mode-indicator"></span>Toggle</label>
+            </div>
+
+            <div id="manualControl_3" class="control-panel active">
+                <div class="switch-container">
+                    <span class="switch-label">OFF</span>
+                    <label class="switch">
+                        <input type="checkbox" id="ledToggle_3">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">ON</span>
+                </div>
+            </div>
+
+            <div id="autoControl_3" class="control-panel">
+                <div>
+                    <label>ON Time:</label>
+                    <input type="time" id="onTime_3" class="time-input">
+                </div>
+                <div>
+                    <label>OFF Time:</label>
+                    <input type="time" id="offTime_3" class="time-input">
+                </div>
+                <button id="setTime_3" class="btn-set">Set Schedule</button>
+            </div>
+
+            <div id="timerControl_3" class="control-panel">
+                <div class="timer-controls">
+                    <label>Timer Duration:</label>
+                    <select id="timerDuration_3" onchange="updateTimerToggle(3)">
+                        <option value="0">No Timer</option>
+                        <option value="60">1 minute</option>
+                        <option value="300">5 minutes</option>
+                        <option value="600">10 minutes</option>
+                        <option value="900">15 minutes</option>
+                        <option value="1800">30 minutes</option>
+                        <option value="2700">45 minutes</option>
+                    </select>
+                </div>
+                <div id="timerSwitchContainer_3" class="timer-switch-container">
+                    <span class="switch-label">OFF</span>
+                    <label class="switch">
+                        <input type="checkbox" id="timerToggle_3">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">ON</span>
+                </div>
+                <div id="timerAnimation_3" class="timer-animation">
+                    <div id="timerCountdown_3" class="timer-countdown">00:00</div>
+                </div>
+            </div>
+
+            <div id="toggleControl_3" class="control-panel">
+                <div class="toggle-input-group">
+                    <div class="toggle-input-container">
+                        <label>ON Minutes</label>
+                        <input type="number" id="toggleOnMinutes_3" min="1" max="1440" class="time-input">
+                    </div>
+                    <div class="toggle-input-container">
+                        <label>OFF Minutes</label>
+                        <input type="number" id="toggleOffMinutes_3" min="1" max="1440" class="time-input">
+                    </div>
+                </div>
+                <div class="switch-container">
+                    <span class="switch-label">OFF</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggleModeSwitch_3">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">ON</span>
+                </div>
+                <div id="toggleTimer_3" class="toggle-timer">Next switch in: 00:00</div>
+            </div>
+
+            <div class="disable-control">
+                <div class="switch-container">
+                    <span class="switch-label">ENABLED</span>
+                    <label class="switch">
+                        <input type="checkbox" id="disableToggle_3">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">DISABLED</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="led4" class="controls-container">
+            <h3 class="led-title" id="ledName_4">LED 4</h3>
+            <div class="status-monitor">
+                <span class="status-indicator"></span>
+                <span id="liveStatus_4">Checking LED status...</span>
+            </div>
+
+            <div class="mode-selector">
+                <input type="radio" id="modeManual_4" name="mode_4" value="manual" checked>
+                <label for="modeManual_4"><span class="mode-indicator"></span>Manual</label>
+                <input type="radio" id="modeAuto_4" name="mode_4" value="auto">
+                <label for="modeAuto_4"><span class="mode-indicator"></span>Auto</label>
+                <input type="radio" id="modeTimer_4" name="mode_4" value="timer">
+                <label for="modeTimer_4"><span class="mode-indicator"></span>Timer</label>
+                <input type="radio" id="modeToggle_4" name="mode_4" value="toggle">
+                <label for="modeToggle_4"><span class="mode-indicator"></span>Toggle</label>
+            </div>
+
+            <div id="manualControl_4" class="control-panel active">
+                <div class="switch-container">
+                    <span class="switch-label">OFF</span>
+                    <label class="switch">
+                        <input type="checkbox" id="ledToggle_4">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">ON</span>
+                </div>
+            </div>
+
+            <div id="autoControl_4" class="control-panel">
+                <div>
+                    <label>ON Time:</label>
+                    <input type="time" id="onTime_4" class="time-input">
+                </div>
+                <div>
+                    <label>OFF Time:</label>
+                    <input type="time" id="offTime_4" class="time-input">
+                </div>
+                <button id="setTime_4" class="btn-set">Set Schedule</button>
+            </div>
+
+            <div id="timerControl_4" class="control-panel">
+                <div class="timer-controls">
+                    <label>Timer Duration:</label>
+                    <select id="timerDuration_4" onchange="updateTimerToggle(4)">
+                        <option value="0">No Timer</option>
+                        <option value="60">1 minute</option>
+                        <option value="300">5 minutes</option>
+                        <option value="600">10 minutes</option>
+                        <option value="900">15 minutes</option>
+                        <option value="1800">30 minutes</option>
+                        <option value="2700">45 minutes</option>
+                    </select>
+                </div>
+                <div id="timerSwitchContainer_4" class="timer-switch-container">
+                    <span class="switch-label">OFF</span>
+                    <label class="switch">
+                        <input type="checkbox" id="timerToggle_4">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">ON</span>
+                </div>
+                <div id="timerAnimation_4" class="timer-animation">
+                    <div id="timerCountdown_4" class="timer-countdown">00:00</div>
+                </div>
+            </div>
+
+            <div id="toggleControl_4" class="control-panel">
+                <div class="toggle-input-group">
+                    <div class="toggle-input-container">
+                        <label>ON Minutes</label>
+                        <input type="number" id="toggleOnMinutes_4" min="1" max="1440" class="time-input">
+                    </div>
+                    <div class="toggle-input-container">
+                        <label>OFF Minutes</label>
+                        <input type="number" id="toggleOffMinutes_4" min="1" max="1440" class="time-input">
+                    </div>
+                </div>
+                <div class="switch-container">
+                    <span class="switch-label">OFF</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggleModeSwitch_4">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">ON</span>
+                </div>
+                <div id="toggleTimer_4" class="toggle-timer">Next switch in: 00:00</div>
+            </div>
+
+            <div class="disable-control">
+                <div class="switch-container">
+                    <span class="switch-label">ENABLED</span>
+                    <label class="switch">
+                        <input type="checkbox" id="disableToggle_4">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">DISABLED</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="version-footer">
+        <span id="versionInfo">Checking version...</span>
+    </footer>
+
+    <script>
+        // Add this function at the start of the script section
+        function fetchLEDNames() {
+            [1, 2, 3, 4].forEach(ledId => {
+                fetch(`/api/led${ledId}/name`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.text();
+                    })
+                    .then(name => {
+                        const nameElement = document.getElementById(`ledName_${ledId}`);
+                        nameElement.textContent = name || `LED ${ledId}`;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching LED name:', error);
+                        const nameElement = document.getElementById(`ledName_${ledId}`);
+                        nameElement.textContent = 'Error';
+                    });
+            });
+        }
+
+        // LED states tracking
+        const ledStates = {
+            1: { enabled: false, schedule: { onTime: null, offTime: null } },
+            2: { enabled: false, schedule: { onTime: null, offTime: null } },
+            3: { enabled: false, schedule: { onTime: null, offTime: null } },
+            4: { enabled: false, schedule: { onTime: null, offTime: null } }
+        };
+
+        // function to fetch LED states
+        function fetchLEDStates() {
+            [1, 2, 3, 4].forEach(ledId => {
+                fetch(`/api/led${ledId}/system/state`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (!data.success) throw new Error(data.error || 'Unknown error');
+
+                        ledStates[ledId].enabled = data.enabled;
+                        const led = document.getElementById(`led${ledId}`);
+                        const disableToggle = document.querySelector(`#disableToggle_${ledId}`);
+                        const controls = document.querySelectorAll(`#led${ledId} .control-panel, #led${ledId} .mode-selector`);
+
+                        // Update UI state
+                        disableToggle.checked = data.disabled;
+                        controls.forEach(panel => {
+                            panel.style.opacity = data.enabled ? '1' : '0.5';
+                            panel.style.pointerEvents = data.enabled ? 'auto' : 'none';
+                        });
+
+                        // Update status text if disabled
+                        if (!data.enabled) {
+                            const statusText = document.querySelector(`#liveStatus_${ledId}`);
+                            const indicator = document.querySelector(`#led${ledId} .status-indicator`);
+                            statusText.textContent = 'Status: Disabled';
+                            indicator.className = 'status-indicator off';
+                        } else {
+                            updateLEDStatus(ledId); // Update status if enabled
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching LED state:', error);
+                        ledStates[ledId].enabled = false;
+                        const disableToggle = document.querySelector(`#disableToggle_${ledId}`);
+                        const controls = document.querySelectorAll(`#led${ledId} .control-panel, #led${ledId} .mode-selector`);
+
+                        disableToggle.checked = true;
+                        controls.forEach(panel => {
+                            panel.style.opacity = '0.5';
+                            panel.style.pointerEvents = 'none';
+                        });
+                    });
+            });
+        }
+
+        // Add this function before setupLED
+        function syncModesFromServer() {
+            [1, 2, 3, 4].forEach(ledId => {
+                if (!ledStates[ledId].enabled) return;
+
+                fetch(`/api/led${ledId}/mode`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.text();
+                    })
+                    .then(mode => {
+                        // Validate mode
+                        const validModes = ['manual', 'auto', 'timer'];
+                        mode = mode.toLowerCase().trim();
+
+                        if (!validModes.includes(mode)) return;
+
+                        // Update UI
+                        const modeRadio = document.querySelector(`#mode${mode.charAt(0).toUpperCase() + mode.slice(1)}_${ledId}`);
+                        const panels = {
+                            manual: document.querySelector(`#manualControl_${ledId}`),
+                            auto: document.querySelector(`#autoControl_${ledId}`),
+                            timer: document.querySelector(`#timerControl_${ledId}`)
+                        };
+
+                        if (modeRadio) {
+                            // Check radio button
+                            modeRadio.checked = true;
+
+                            // Show correct panel
+                            Object.values(panels).forEach(panel => {
+                                if (panel) panel.classList.remove('active');
+                            });
+                            if (panels[mode]) panels[mode].classList.add('active');
+                        }
+                    })
+                    .catch(error => console.error(`Error syncing mode for LED ${ledId}:`, error));
+            });
+        }
+
+        // Replace the initModesFromServer function
+        function initModesFromServer() {
+            [1, 2, 3, 4].forEach(ledId => {
+                fetch(`/api/led${ledId}/mode`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.text();
+                    })
+                    .then(mode => {
+                        mode = mode.toLowerCase().trim();
+                        if (!['manual', 'auto', 'timer', 'toggle'].includes(mode)) return;
+
+                        // Remove active class from all indicators
+                        document.querySelectorAll(`#led${ledId} .mode-indicator`).forEach(indicator => {
+                            indicator.classList.remove('active');
+                        });
+
+                        // Add active class to current mode indicator
+                        const modeSelector = document.querySelector(`#mode${mode.charAt(0).toUpperCase() + mode.slice(1)}_${ledId}`);
+                        if (modeSelector) {
+                            modeSelector.checked = true;
+                            const indicator = modeSelector.nextElementSibling.querySelector('.mode-indicator');
+                            if (indicator) indicator.classList.add('active');
+                        }
+
+                        // Show the correct panel
+                        const panels = document.querySelectorAll(`#led${ledId} .control-panel`);
+                        panels.forEach(p => p.classList.remove('active'));
+                        document.querySelector(`#${mode}Control_${ledId}`).classList.add('active');
+
+                        // Check specific mode states
+                        if (mode === 'timer') {
+                            checkTimerState(ledId);
+                        } else if (mode === 'toggle') {
+                            checkToggleState(ledId);
+                        }
+                    })
+                    .catch(error => console.error(`Error loading mode for LED ${ledId}:`, error));
+            });
+        }
+
+        // Add this function after fetchLEDStates
+        function fetchScheduleTimes() {
+            [1, 2, 3, 4].forEach(ledId => {
+                fetch(`/api/led${ledId}/schedule`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then(schedule => {
+                        const onTimeInput = document.querySelector(`#onTime_${ledId}`);
+                        const offTimeInput = document.querySelector(`#offTime_${ledId}`);
+
+                        if (schedule.onTime) {
+                            const hours = Math.floor(schedule.onTime / 100);
+                            const minutes = schedule.onTime % 100;
+                            onTimeInput.value = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                        }
+
+                        if (schedule.offTime) {
+                            const hours = Math.floor(schedule.offTime / 100);
+                            const minutes = schedule.offTime % 100;
+                            offTimeInput.value = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                        }
+
+                        // Store times in ledStates for persistence
+                        ledStates[ledId].schedule = {
+                            onTime: schedule.onTime,
+                            offTime: schedule.offTime
+                        };
+                    })
+                    .catch(error => console.error(`Error fetching schedule for LED ${ledId}:`, error));
+            });
+        }
+
+        // active timer tracking
+        const activeTimers = {
+            1: null,
+            2: null,
+            3: null,
+            4: null
+        };
+
+        const activeToggleTimers = {
+            1: null,
+            2: null,
+            3: null,
+            4: null
+        };
+
+        function showTimerAnimation(ledId) {
+            const elements = {
+                animation: document.querySelector(`#timerAnimation_${ledId}`),
+                countdown: document.querySelector(`#timerCountdown_${ledId}`),
+                controls: document.querySelector(`#timerControl_${ledId} .timer-controls`),
+                switchContainer: document.querySelector(`#timerSwitchContainer_${ledId}`)
+            };
+
+            if (activeTimers[ledId]) {
+                clearInterval(activeTimers[ledId]);
+            }
+
+            // Hide controls and show animation with switch
+            elements.controls.style.display = 'none';
+            elements.switchContainer.style.display = 'flex';
+            elements.animation.classList.add('active');
+
+            function updateTimerDisplay() {
+                fetch(`/api/led${ledId}/timer/state`)
+                    .then(response => response.json())
+                    .then(state => {
+                        if (!state.active || !state.remaining) {
+                            hideTimerAnimation(ledId);
+                            return;
+                        }
+                        // Get current LED status to determine the next state
+                        fetch(`/api/led${ledId}/status`)
+                            .then(response => response.json())
+                            .then(statusData => {
+                                const minutes = Math.floor(state.remaining / 60);
+                                const seconds = state.remaining % 60;
+                                const transitionState = statusData.state === 'ON' ? 'OFF' : 'ON';
+                                elements.countdown.textContent =
+                                    `Turning ${transitionState} in: ${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                            });
+                    })
+                    .catch(() => hideTimerAnimation(ledId));
+            }
+
+            updateTimerDisplay();
+            activeTimers[ledId] = setInterval(updateTimerDisplay, 1000);
+        }
+
+        function hideTimerAnimation(ledId) {
+            if (activeTimers[ledId]) {
+                clearInterval(activeTimers[ledId]);
+                activeTimers[ledId] = null;
+            }
+
+            const elements = {
+                animation: document.querySelector(`#timerAnimation_${ledId}`),
+                controls: document.querySelector(`#timerControl_${ledId} .timer-controls`),
+                switchContainer: document.querySelector(`#timerSwitchContainer_${ledId}`),
+                countdown: document.querySelector(`#timerCountdown_${ledId}`),
+                durationSelect: document.querySelector(`#timerDuration_${ledId}`),
+                timerToggle: document.querySelector(`#timerToggle_${ledId}`)
+            };
+
+            // Reset all timer controls
+            elements.animation.classList.remove('active');
+            elements.controls.style.display = 'flex';
+            elements.switchContainer.style.display = 'none';
+            elements.countdown.textContent = '00:00';
+            elements.durationSelect.value = "0";
+            elements.timerToggle.checked = false;
+        }
+
+        function checkTimerState(ledId) {
+            fetch(`/api/led${ledId}/timer/state`)
+                .then(response => response.json())
+                .then(state => {
+                    // If no state or not active, ensure controls are visible and reset
+                    if (!state || !state.active) {
+                        hideTimerAnimation(ledId);
+                        const elements = {
+                            controls: document.querySelector(`#timerControl_${ledId} .timer-controls`),
+                            switchContainer: document.querySelector(`#timerSwitchContainer_${ledId}`)
+                        };
+                        elements.controls.classList.remove('hidden');
+                        elements.switchContainer.classList.remove('hidden');
+                        return;
+                    }
+
+                    // Switch to timer mode and show panel
+                    const modeSelector = document.querySelector(`#modeTimer_${ledId}`);
+                    const timerPanel = document.querySelector(`#timerControl_${ledId}`);
+
+                    modeSelector.checked = true;
+                    document.querySelectorAll(`#led${ledId} .control-panel`).forEach(p => p.classList.remove('active'));
+                    timerPanel.classList.add('active');
+
+                    // Set duration and toggle
+                    const durationSelect = document.querySelector(`#timerDuration_${ledId}`);
+                    const timerToggle = document.querySelector(`#timerToggle_${ledId}`);
+                    durationSelect.value = state.duration;
+                    timerToggle.checked = true;
+
+                    // Show animation without hiding controls initially
+                    const elements = {
+                        animation: document.querySelector(`#timerAnimation_${ledId}`),
+                        countdown: document.querySelector(`#timerCountdown_${ledId}`)
+                    };
+                    elements.animation.classList.add('active');
+                    showTimerAnimation(ledId);
+                })
+                .catch(error => console.error('Error checking timer state:', error));
+        }
+
+        function checkAllTimerStates() {
+            [1, 2, 3, 4].forEach(ledId => {
+                fetch(`/api/led${ledId}/mode`)
+                    .then(response => response.text())
+                    .then(mode => {
+                        if (mode.trim().toLowerCase() === 'timer') {
+                            checkTimerState(ledId);
+                        }
+                    })
+                    .catch(error => console.error('Error checking timer mode:', error));
+            });
+        }
+
+        function updateTimerToggle(ledId) {
+            const durationSelect = document.querySelector(`#timerDuration_${ledId}`);
+            const switchContainer = document.querySelector(`#timerSwitchContainer_${ledId}`);
+            const timerToggle = document.querySelector(`#timerToggle_${ledId}`);
+
+            if (durationSelect.value === "0") {
+                switchContainer.style.display = 'none';
+                timerToggle.checked = false;
+                if (activeTimers[ledId]) {
+                    hideTimerAnimation(ledId);
+                }
+            } else {
+                switchContainer.style.display = 'flex';
+            }
+        }
+
+        // Function to initialize LED controls
+        function setupLED(ledId) {
+            const led = {
+                container: document.getElementById(`led${ledId}`),
+                modes: document.querySelectorAll(`input[name="mode_${ledId}"]`),
+                indicator: document.querySelector(`#led${ledId} .status-indicator`),
+                statusText: document.querySelector(`#liveStatus_${ledId}`),
+                toggle: document.querySelector(`#ledToggle_${ledId}`),
+                panels: {
+                    manual: document.querySelector(`#manualControl_${ledId}`),
+                    auto: document.querySelector(`#autoControl_${ledId}`),
+                    timer: document.querySelector(`#timerControl_${ledId}`),
+                    toggle: document.querySelector(`#toggleControl_${ledId}`) // Add toggle panel
+                },
+                disableToggle: document.querySelector(`#disableToggle_${ledId}`),
+                allControls: document.querySelectorAll(`#led${ledId} .control-panel, #led${ledId} .mode-selector`),
+                timerDuration: document.querySelector(`#timerDuration_${ledId}`),
+                timerSwitch: document.querySelector(`#timerSwitchContainer_${ledId}`)
+            };            // Mode selection handler - only changes visible panel for preview
+            led.modes.forEach(mode => {
+                mode.onclick = () => {
+                    if (!ledStates[ledId].enabled) return;
+                    // Only update panel visibility without changing server state
+                    Object.values(led.panels).forEach(panel => {
+                        if (panel) panel.classList.remove('active');
+                    });
+                    if (led.panels[mode.value]) {
+                        led.panels[mode.value].classList.add('active');
+                    }
+                };
+            });// Manual mode toggle handler
+            led.toggle.onclick = () => {
+                if (!ledStates[ledId].enabled) return;
+
+                // Stop any timer animation and clear timer toggle
+                if (activeTimers[ledId]) {
+                    hideTimerAnimation(ledId);
+                    const timerToggle = document.querySelector(`#timerToggle_${ledId}`);
+                    timerToggle.checked = false;
+                }
+
+                // Stop toggle mode if active
+                if (activeToggleTimers[ledId]) {
+                    clearInterval(activeToggleTimers[ledId]);
+                    activeToggleTimers[ledId] = null;
+                    const toggleModeSwitch = document.querySelector(`#toggleModeSwitch_${ledId}`);
+                    toggleModeSwitch.checked = false;
+                    const timerElement = document.querySelector(`#toggleTimer_${ledId}`);
+                    timerElement.classList.remove('active');
+                }
+
+                // Set radio button to manual
+                const modeManual = document.querySelector(`#modeManual_${ledId}`);
+                modeManual.checked = true;
+
+                // Show manual panel
+                Object.values(led.panels).forEach(panel => {
+                    if (panel) panel.classList.remove('active');
+                });
+                led.panels.manual.classList.add('active');
+
+                fetch(`/api/led${ledId}/mode`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: 'manual' })
+                })
+                    .then(() => {
+                        return fetch(`/api/led${ledId}/toggle`, { method: 'POST' });
+                    })
+                    .then(() => updateLEDStatus(ledId))
+                    .catch(error => console.error('Error:', error));
+            };            // Auto mode schedule handler
+            const setTimeBtn = document.querySelector(`#setTime_${ledId}`);
+            setTimeBtn.onclick = () => {
+                if (!ledStates[ledId].enabled) return;
+
+                const onTime = document.querySelector(`#onTime_${ledId}`).value;
+                const offTime = document.querySelector(`#offTime_${ledId}`).value;
+
+                if (!onTime || !offTime) {
+                    alert('Please set both ON and OFF times');
+                    return;
+                }
+
+                // Stop any timer animation and clear timer toggle
+                if (activeTimers[ledId]) {
+                    hideTimerAnimation(ledId);
+                    const timerToggle = document.querySelector(`#timerToggle_${ledId}`);
+                    timerToggle.checked = false;
+                }
+
+                // Stop toggle mode if active
+                if (activeToggleTimers[ledId]) {
+                    clearInterval(activeToggleTimers[ledId]);
+                    activeToggleTimers[ledId] = null;
+                    const toggleModeSwitch = document.querySelector(`#toggleModeSwitch_${ledId}`);
+                    toggleModeSwitch.checked = false;
+                    const timerElement = document.querySelector(`#toggleTimer_${ledId}`);
+                    timerElement.classList.remove('active');
+                }
+
+                // Set radio button to auto
+                const modeAuto = document.querySelector(`#modeAuto_${ledId}`);
+                modeAuto.checked = true;
+
+                // Show auto panel
+                Object.values(led.panels).forEach(panel => {
+                    if (panel) panel.classList.remove('active');
+                });
+                led.panels.auto.classList.add('active');
+
+                fetch(`/api/led${ledId}/mode`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: 'auto' })
+                })
+                    .then(() => {
+                        return fetch(`/api/led${ledId}/schedule`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                onTime: onTime,  // Now sending as "HH:MM"
+                                offTime: offTime
+                            })
+                        });
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Failed to set schedule');
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (!data.success) throw new Error(data.error || 'Unknown error');
+                        alert('Schedule set successfully!');
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to set schedule: ' + error.message);
+                    });
+            };            // Timer mode handler
+            const timerToggle = document.querySelector(`#timerToggle_${ledId}`);
+            timerToggle.onclick = () => {
+                if (!ledStates[ledId].enabled) return;
+
+                const duration = document.querySelector(`#timerDuration_${ledId}`).value;
+                if (duration === "0") {
+                    alert('Please select a duration');
+                    timerToggle.checked = false;
+                    return;
+                }
+
+                // If unchecking, stop the timer
+                if (!timerToggle.checked) {
+                    fetch(`/api/led${ledId}/timer`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ duration: 0, start: false, maintainState: true })
+                    })
+                        .then(response => {
+                            if (!response.ok) throw new Error('Failed to stop timer');
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                hideTimerAnimation(ledId);
+                            } else {
+                                throw new Error(data.error || 'Failed to stop timer');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            timerToggle.checked = true;
+                        });
+                    return;
+                }                // Otherwise start a new timer
+                const timerDurationValue = document.querySelector(`#timerDuration_${ledId}`).value;
+                if (timerDurationValue === "0") {
+                    alert('Please select a duration');
+                    timerToggle.checked = false;
+                    return;
+                }                // Set radio button to timer
+                const modeTimer = document.querySelector(`#modeTimer_${ledId}`);
+                modeTimer.checked = true;
+
+                // Show timer panel
+                Object.values(led.panels).forEach(panel => {
+                    if (panel) panel.classList.remove('active');
+                });
+                led.panels.timer.classList.add('active');
+
+                // Stop toggle mode if active
+                if (activeToggleTimers[ledId]) {
+                    clearInterval(activeToggleTimers[ledId]);
+                    activeToggleTimers[ledId] = null;
+                    const toggleModeSwitch = document.querySelector(`#toggleModeSwitch_${ledId}`);
+                    toggleModeSwitch.checked = false;
+                    const timerElement = document.querySelector(`#toggleTimer_${ledId}`);
+                    timerElement.classList.remove('active');
+                }
+
+                fetch(`/api/led${ledId}/mode`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: 'timer' })
+                })
+                    .then(() => {
+                        return fetch(`/api/led${ledId}/timer`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ duration: parseInt(timerDurationValue), start: true })
+                        });
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then((data) => {
+                        if (!data.success) throw new Error(data.error || 'Timer operation failed');
+                        if (data.active) {
+                            showTimerAnimation(ledId);
+                        } else {
+                            hideTimerAnimation(ledId);
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+                        timerToggle.checked = !timerToggle.checked;
+                        alert('Failed to set timer: ' + error.message);
+                    });
+            };
+
+            // Toggle mode handler
+            const toggleModeSwitch = document.querySelector(`#toggleModeSwitch_${ledId}`);
+            toggleModeSwitch.onclick = () => {
+                if (!ledStates[ledId].enabled) return;
+
+                const onMinutes = parseInt(document.querySelector(`#toggleOnMinutes_${ledId}`).value);
+                const offMinutes = parseInt(document.querySelector(`#toggleOffMinutes_${ledId}`).value);
+
+                if (isNaN(onMinutes) || isNaN(offMinutes) || onMinutes < 1 || offMinutes < 1) {
+                    alert('Please set valid ON and OFF minutes');
+                    toggleModeSwitch.checked = false;
+                    return;
+                }                // Set radio button to toggle mode
+                const modeToggle = document.querySelector(`#modeToggle_${ledId}`);
+                modeToggle.checked = true;
+
+                // Show toggle panel
+                Object.values(led.panels).forEach(panel => {
+                    if (panel) panel.classList.remove('active');
+                });
+                led.panels.toggle.classList.add('active');
+
+                // Stop any timer animation and clear timer toggle
+                if (activeTimers[ledId]) {
+                    hideTimerAnimation(ledId);
+                    const timerToggle = document.querySelector(`#timerToggle_${ledId}`);
+                    timerToggle.checked = false;
+                }
+
+                fetch(`/api/led${ledId}/toggle-mode`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        onMinutes: onMinutes,
+                        offMinutes: offMinutes,
+                        start: toggleModeSwitch.checked
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.success) throw new Error(data.error || 'Toggle operation failed');
+
+                        if (data.active) {
+                            // Start timer updates
+                            if (activeToggleTimers[ledId]) {
+                                clearInterval(activeToggleTimers[ledId]);
+                            }
+                            updateToggleTimer(ledId);
+                            activeToggleTimers[ledId] = setInterval(() => updateToggleTimer(ledId), 1000);
+                        } else {
+                            // Stop timer updates
+                            if (activeToggleTimers[ledId]) {
+                                clearInterval(activeToggleTimers[ledId]);
+                                activeToggleTimers[ledId] = null;
+                            }
+                            const timerElement = document.querySelector(`#toggleTimer_${ledId}`);
+                            timerElement.classList.remove('active');
+                            toggleModeSwitch.checked = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        toggleModeSwitch.checked = false;
+                        alert('Failed to set toggle mode: ' + error.message);
+                    });
+            };
+
+            // Modify disable toggle handler
+            led.disableToggle.onclick = () => {
+                ledStates[ledId].enabled = !led.disableToggle.checked;
+
+                // Stop any active timers and reset modes
+                if (!ledStates[ledId].enabled) {
+                    // Clean up timer mode if active
+                    if (activeTimers[ledId]) {
+                        hideTimerAnimation(ledId);
+                        const timerToggle = document.querySelector(`#timerToggle_${ledId}`);
+                        timerToggle.checked = false;
+                    }
+
+                    // Clean up toggle mode if active
+                    if (activeToggleTimers[ledId]) {
+                        clearInterval(activeToggleTimers[ledId]);
+                        activeToggleTimers[ledId] = null;
+                        const timerElement = document.querySelector(`#toggleTimer_${ledId}`);
+                        timerElement.classList.remove('active');
+                        const toggleModeSwitch = document.querySelector(`#toggleModeSwitch_${ledId}`);
+                        toggleModeSwitch.checked = false;
+
+                        // Set mode back to manual
+                        fetch(`/api/led${ledId}/mode`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ mode: 'manual' })
+                        });
+
+                        // Update UI to show manual mode
+                        const modeManual = document.querySelector(`#modeManual_${ledId}`);
+                        modeManual.checked = true;
+                        Object.values(led.panels).forEach(panel => {
+                            if (panel) panel.classList.remove('active');
+                        });
+                        led.panels.manual.classList.add('active');
+                    }
+                }
+
+                // Stop any active timer animation
+                if (!ledStates[ledId].enabled && activeTimers[ledId]) {
+                    hideTimerAnimation(ledId);
+                    const timerToggle = document.querySelector(`#timerToggle_${ledId}`);
+                    timerToggle.checked = false;
+                }
+
+                // Update UI state
+                led.allControls.forEach(panel => {
+                    panel.style.opacity = ledStates[ledId].enabled ? '1' : '0.5';
+                    panel.style.pointerEvents = ledStates[ledId].enabled ? 'auto' : 'none';
+                });
+
+                // Update status display
+                if (!ledStates[ledId].enabled) {
+                    led.indicator.className = 'status-indicator off';
+                    led.statusText.textContent = 'Status: Disabled';
+                    // Clear any existing intervals
+                    if (led.statusInterval) {
+                        clearInterval(led.statusInterval);
+                    }
+                } else {
+                    updateLEDStatus(ledId);
+                    // Restart status updates
+                    led.statusInterval = setInterval(() => updateLEDStatus(ledId), 2000);
+                }
+
+                // Send state to server
+                fetch(`/api/led${ledId}/system/state`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: ledStates[ledId].enabled })
+                });
+            };
+
+            // timer duration change handler
+            led.timerDuration.onchange = () => {
+                if (led.timerDuration.value === "0") {
+                    led.timerSwitch.style.display = 'none';
+                } else {
+                    led.timerSwitch.style.display = 'flex';
+                }
+            };
+
+            // Initialize timer switch visibility
+            led.timerSwitch.style.display = led.timerDuration.value === "0" ? 'none' : 'flex';
+
+            // Function to update timer toggle visibility            // Set inline event handlers for timerDuration selects
+            document.querySelectorAll(`[id^="timerDuration_"]`).forEach(select => {
+                select.onchange = () => {
+                    const ledId = select.id.split('_')[1];
+                    updateTimerToggle(ledId);
+                };
+            });
+
+            // Start status updates with interval reference
+            led.statusInterval = setInterval(() => updateLEDStatus(ledId), 2000);
+            updateLEDStatus(ledId);
+
+            // Initial update if starting in manual mode
+            if (led.modes[0].checked) {
+                updateLEDStatus(ledId);
+            }
+        }
+
+        function updateToggleTimer(ledId) {
+            fetch(`/api/led${ledId}/toggle-mode/state`)
+                .then(response => response.json())
+                .then(data => {
+                    const timerElement = document.querySelector(`#toggleTimer_${ledId}`);
+
+                    if (!data.success || !data.active) {
+                        timerElement.classList.remove('active');
+                        if (activeToggleTimers[ledId]) {
+                            clearInterval(activeToggleTimers[ledId]);
+                            activeToggleTimers[ledId] = null;
+                        }
+                        return;
+                    }
+
+                    timerElement.classList.add('active');
+                    const minutes = Math.floor(data.remaining / 60);
+                    const seconds = data.remaining % 60;
+                    const nextState = data.state === 'ON' ? 'OFF' : 'ON';
+                    timerElement.textContent = `Next ${nextState} in: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                })
+                .catch(error => {
+                    console.error('Error updating toggle timer:', error);
+                    const timerElement = document.querySelector(`#toggleTimer_${ledId}`);
+                    timerElement.classList.remove('active');
+                    if (activeToggleTimers[ledId]) {
+                        clearInterval(activeToggleTimers[ledId]);
+                        activeToggleTimers[ledId] = null;
+                    }
+                });
+        }
+
+        // Add this new function to check and update mode indicators
+        function updateModeIndicators(ledId) {
+            fetch(`/api/led${ledId}/mode`)
+                .then(response => response.text())
+                .then(currentMode => {
+                    // Remove active class from all indicators for this LED
+                    document.querySelectorAll(`#led${ledId} .mode-indicator`).forEach(indicator => {
+                        indicator.classList.remove('active');
+                    });
+
+                    // Add active class to current mode's indicator
+                    const activeMode = currentMode.toLowerCase().trim();
+                    const modeSelector = document.querySelector(`#mode${activeMode.charAt(0).toUpperCase() + activeMode.slice(1)}_${ledId}`);
+                    if (modeSelector) {
+                        const indicator = modeSelector.nextElementSibling.querySelector('.mode-indicator');
+                        if (indicator) {
+                            indicator.classList.add('active');
+                        }
+                    }
+                })
+                .catch(error => console.error('Error updating mode indicators:', error));
+        }
+
+        // Modify updateLEDStatus to also update mode indicators
+        function updateLEDStatus(ledId) {
+            if (!ledStates[ledId].enabled) return;
+
+            // Add this line to update mode indicators
+            updateModeIndicators(ledId);
+
+            const indicator = document.querySelector(`#led${ledId} .status-indicator`);
+            const statusText = document.querySelector(`#liveStatus_${ledId}`);
+            const toggle = document.querySelector(`#ledToggle_${ledId}`);
+
+            fetch(`/api/led${ledId}/status`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data.success) throw new Error(data.error || 'Unknown error');
+
+                    const state = data.state;
+                    if (state === 'ON' || state === 'OFF') {
+                        indicator.className = `status-indicator ${state.toLowerCase()}`;
+                        statusText.textContent = `Status: ${state}`;
+                        toggle.checked = (state === 'ON');
+                    } else {
+                        throw new Error('Invalid state received');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    indicator.className = 'status-indicator off';
+                    statusText.textContent = 'Status: Error';
+                    toggle.checked = false;
+                });
+        }
+
+        // Connection status check
+        function checkConnection() {
+            fetch('/api/status')
+                .then(response => response.text())
+                .then(status => {
+                    const conn = document.getElementById('connectionStatus');
+                    if (status === 'true') {
+                        conn.className = 'connection-status online';
+                        conn.querySelector('span:last-child').textContent = 'Online';
+                    } else {
+                        conn.className = 'connection-status offline';
+                        conn.querySelector('span:last-child').textContent = 'Offline';
+                    }
+                })
+                .catch(() => {
+                    const conn = document.getElementById('connectionStatus');
+                    conn.className = 'connection-status offline';
+                    conn.querySelector('span:last-child').textContent = 'Offline';
+                });
+        }
+
+        function fetchVersion() {
+            fetch('/api/version')
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
+                .then(version => {
+                    document.getElementById('versionInfo').textContent = version;
+                })
+                .catch(error => {
+                    console.error('Error fetching version:', error);
+                    document.getElementById('versionInfo').textContent = 'error';
+                });
+        }
+
+        function checkRTCSync() {
+            fetch('/api/rtctime')
+                .then(response => response.text())
+                .then(rtcTime => {
+                    const now = new Date();
+                    const systemTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+                    if (rtcTime !== systemTime) {
+                        alert(`RTC time (${rtcTime}) is out of sync with system time (${systemTime}). Please check device settings.`);
+                    }
+                })
+                .catch(error => console.error('Error checking RTC sync:', error));
+        }
+
+        // Replace existing initialization code with this modified version
+        function initializeApp() {
+            checkRTCSync(); // Add RTC check at startup
+
+            Promise.all([
+                fetchLEDStates(),
+                fetchLEDNames(),
+                fetchScheduleTimes()
+            ]).then(() => {
+                initModesFromServer();
+                [1, 2, 3, 4].forEach(ledId => {
+                    setupLED(ledId);
+                    checkTimerState(ledId);
+                });
+            });
+
+            setInterval(checkConnection, 5000);
+            checkConnection();
+            fetchVersion();
+        }
+
+        // Start the app
+        initializeApp();
+
+        function checkToggleState(ledId) {
+            fetch(`/api/led${ledId}/toggle-mode/state`)
+                .then(response => response.json())
+                .then(state => {
+                    if (!state.active) return;
+
+                    // Set toggle inputs
+                    const onMinutes = document.querySelector(`#toggleOnMinutes_${ledId}`);
+                    const offMinutes = document.querySelector(`#toggleOffMinutes_${ledId}`);
+                    const toggleSwitch = document.querySelector(`#toggleModeSwitch_${ledId}`);
+
+                    onMinutes.value = state.onMinutes;
+                    offMinutes.value = state.offMinutes;
+                    toggleSwitch.checked = true;
+
+                    // Start timer updates
+                    if (activeToggleTimers[ledId]) {
+                        clearInterval(activeToggleTimers[ledId]);
+                    }
+                    updateToggleTimer(ledId);
+                    activeToggleTimers[ledId] = setInterval(() => updateToggleTimer(ledId), 1000);
+                })
+                .catch(error => console.error('Error checking toggle state:', error));
+        }
+
+        function handleModeChange(ledId, newMode) {
+            // Clear any active timers
+            if (activeTimers[ledId]) {
+                hideTimerAnimation(ledId);
+                const timerToggle = document.querySelector(`#timerToggle_${ledId}`);
+                timerToggle.checked = false;
+            }
+
+            // Clear toggle mode if active
+            if (activeToggleTimers[ledId]) {
+                clearInterval(activeToggleTimers[ledId]);
+                activeToggleTimers[ledId] = null;
+                const toggleModeSwitch = document.querySelector(`#toggleModeSwitch_${ledId}`);
+                toggleModeSwitch.checked = false;
+                const timerElement = document.querySelector(`#toggleTimer_${ledId}`);
+                timerElement.classList.remove('active');
+            }
+
+            // Show the correct panel
+            const panels = document.querySelectorAll(`#led${ledId} .control-panel`);
+            panels.forEach(panel => panel.classList.remove('active'));
+            document.querySelector(`#${newMode}Control_${ledId}`).classList.add('active');
+
+            // Update the server
+            fetch(`/api/led${ledId}/mode`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode: newMode })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) throw new Error(data.error || 'Failed to update mode');
+                    // Add this line to update indicators immediately
+                    updateModeIndicators(ledId);
+                    if (newMode === 'timer') {
+                        checkTimerState(ledId);
+                    }
+                })
+                .catch(error => console.error('Error updating mode:', error));
+        }
+    </script>
+</body>
+
+</html>
