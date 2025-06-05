@@ -24,7 +24,7 @@
 
 RTC_DS3231 rtc;
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "asia.pool.ntp.org", 19800); // UTC+5:30 for India
+NTPClient timeClient(ntpUDP, "asia.pool.ntp.org", 19800); // 19800 = UTC+5:30 for India
 
 // Software version
 #define SWVersion "v1.0.0"
