@@ -1,11 +1,19 @@
 /*
  * Smart-Aquarium-V3.1 - ESP8266-based Interactive Networked Aquarium
- * Copyright (C) 2025
+ * Copyright (C) 2025 desiFish (https://github.com/desiFish)
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * This program is free software under GPL v3: you can:
+ * - Use it for any purpose
+ * - Study and modify the code
+ * - Share any modifications under the same license
+ *
+ * Key requirements:
+ * - Keep all copyright notices
+ * - Include original source code when distributing
+ * - Share modifications under GPL v3
+ *
+ * Full license at: https://www.gnu.org/licenses/gpl-3.0.txt
+ * Project repo: https://github.com/desiFish/Smart-Aquarium-V3.1
  */
 
 #include <ESP8266WiFi.h>
@@ -15,7 +23,7 @@
 #include <ArduinoJson.h>
 #include <Wire.h>
 #include <ElegantOTA.h>
-#include "global.h" //remove this 
+#include "global.h" //remove this
 
 // NTP and RTC
 #include <NTPClient.h>
