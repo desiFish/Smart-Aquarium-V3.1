@@ -1,5 +1,7 @@
 # Smart Aquarium V3.1 🐟
 
+> 📢 **New Project Notice**: ESP32 version: [Smart Aquarium V4.0](https://github.com/desiFish/Smart-Aquarium-V4.0) is under development that supports similar powerful customization options and advanced monitoring features for aquarium inhabitants. Be the first ones to try it out and give feedbacks! 🚀
+
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/desiFish/Smart-Aquarium-V3.1)](https://github.com/desiFish/Smart-Aquarium-V3.1/releases)
 [![GitHub issues](https://img.shields.io/github/issues/desiFish/Smart-Aquarium-V3.1)](https://github.com/desiFish/Smart-Aquarium-V3.1/issues)
 [![GitHub stars](https://img.shields.io/github/stars/desiFish/Smart-Aquarium-V3.1)](https://github.com/desiFish/Smart-Aquarium-V3.1/stargazers)
