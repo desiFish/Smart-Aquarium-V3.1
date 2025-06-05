@@ -106,7 +106,7 @@ All libraries can be installed through the Arduino Library Manager. These specif
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/yourusername/Smart-Aquarium-V3.1.git
+   git clone https://github.com/desiFish/Smart-Aquarium-V3.1.git
    ```
 
 2. Open the project in Arduino IDE
@@ -179,14 +179,23 @@ The system provides a modern, fully responsive web interface optimized for both 
 
 ## 📸 Gallery
 
-### Desktop View
-![Main Dashboard](src/index.png)
-![Settings Interface](src/settings.png)
+<div align="center">
+<img src="src/index.png" alt="Main Dashboard" width="600"/>
+<p><em>Main Dashboard - Desktop View: Control panel showing relay states and operation modes</em></p>
 
-### Mobile View
+<img src="src/settings.png" alt="Settings Interface" width="600"/>
+<p><em>Settings Page - Desktop View: Configuration interface for relay names and system settings</em></p>
+
 <div style="display: flex; justify-content: center; gap: 20px;">
+  <div>
     <img src="src/index-phone.png" alt="Mobile Dashboard" width="250"/>
+    <p><em>Main Dashboard - Mobile View</em></p>
+  </div>
+  <div>
     <img src="src/settings-phone.png" alt="Mobile Settings" width="250"/>
+    <p><em>Settings Page - Mobile View</em></p>
+  </div>
+</div>
 </div>
 
 ## 🔌 API Endpoints
@@ -213,6 +222,16 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📜 License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+
+Key points of GPL v3:
+- ✅ Freedom to use, study, share, and modify the software
+- ⚠️ Modified versions must also be open source under GPL v3
+- 📝 Changes must be documented and dated
+- ⚖️ No warranty provided; use at your own risk
+- 🔒 Cannot be used in proprietary/closed source software
+- 📦 Include original copyright and license notices
+
+For complete license terms, see the [full GPL v3 text](https://www.gnu.org/licenses/gpl-3.0.txt).
 
 ## 🙏 Acknowledgments
 
