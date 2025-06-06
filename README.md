@@ -15,6 +15,8 @@
 
 An advanced, ESP8266-based interactive aquarium control system with a modern web interface for managing multiple relays, timers, and schedules.
 
+> © 2025 desiFish. This project is protected by copyright law. All rights reserved unless explicitly stated under the GPL v3 license terms.
+
 ## 📸 Gallery
 
 <div align="center">
