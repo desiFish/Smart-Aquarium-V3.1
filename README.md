@@ -16,6 +16,31 @@ An advanced, ESP8266-based interactive aquarium control system with a modern web
 
 > © 2025 desiFish. This project is protected by copyright law. All rights reserved unless explicitly stated under the GPL v3 license terms.
 
+## ⚠️ Safety Disclaimer
+
+**WARNING: This project involves working with HIGH VOLTAGE (220V AC) electrical systems which can be LETHAL.**
+
+By using this project, you acknowledge and agree to the following:
+
+1. **Inherent Risks**: Working with electrical systems, particularly those involving mains voltage (220V AC), carries inherent risks including but not limited to:
+   - Electric shock
+   - Fire hazards
+   - Equipment damage
+   - Serious injury or death
+
+2. **Liability Waiver**: The creator(s) and contributor(s) of this project:
+   - Accept NO LIABILITY for any damage, injury, or death resulting from the use of this project
+   - Make NO WARRANTIES or guarantees about the safety or functionality of this project
+   - Are NOT responsible for any improper implementation or modifications
+
+3. **Required Precautions**:
+   - Installation MUST be performed by a qualified electrician
+   - ALL local electrical codes and regulations MUST be followed
+   - Proper isolation and safety measures MUST be implemented
+   - Regular safety inspections are MANDATORY
+
+**USE THIS PROJECT AT YOUR OWN RISK**
+
 ## 📸 Gallery
 
 <div align="center">
@@ -103,6 +128,12 @@ This system is highly scalable and can be easily modified to control more or few
 - WiFi Connection
 
 > 💡 **Compatibility**: While this project is developed and tested on the ESP8266 12-E NodeMCU Kit, it should work on other ESP8266-based development boards with minimal modifications. Just ensure your board has enough GPIO pins for the relay and RTC connections.
+
+### ESP8266 Pinout
+<div align="center">
+  <img src="src/esp8266pinout.png" alt="ESP8266 NodeMCU Pinout"/>
+  <p><em>ESP8266 NodeMCU pinout diagram (Source: <a href="https://randomnerdtutorials.com">RandomNerdTutorials</a>)</em></p>
+</div>
 
 ### Circuit Diagram
 ![Hardware Connections](src/schematics.png)
