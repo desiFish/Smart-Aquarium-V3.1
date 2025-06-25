@@ -140,6 +140,33 @@ This system is highly scalable and can be easily modified to control more or few
 
 The above schematic shows the connections between the ESP8266, RTC module, and relay module. Make sure to follow the pin connections exactly as shown for proper functionality.
 
+## 🕒 NTP Time Offset and Server Selection
+
+The code uses the following line to initialize the NTP client:
+```cpp
+NTPClient timeClient(ntpUDP, "in.pool.ntp.org", 19800);
+```
+- The third parameter, `19800`, is the time offset in **seconds** for your timezone.
+- `19800` seconds = **5 hours 30 minutes** (5 × 3600 + 30 × 60), which is the offset for **Indian Standard Time (IST, UTC+5:30)**.
+- If you are in a different timezone, calculate your offset in seconds and update this value accordingly.
+
+**How to calculate your offset:**
+- Offset (in seconds) = (Hours × 3600) + (Minutes × 60)
+- Example for UTC+2: (2 × 3600) = `7200`
+
+**Default NTP Server:**
+- The default NTP server is set to `"in.pool.ntp.org"` (India).
+- For best accuracy, select the NTP pool server nearest to your location from [https://www.ntppool.org/en/zone/in](https://www.ntppool.org/en/zone/in) or [https://www.ntppool.org/](https://www.ntppool.org/).
+
+**To change:**
+- Replace `"in.pool.ntp.org"` with your region's NTP pool server (e.g., `"europe.pool.ntp.org"`, `"us.pool.ntp.org"`, etc.).
+- Adjust the offset to match your local timezone.
+
+Example for Central European Time (CET, UTC+1):
+```cpp
+NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 3600);
+```
+
 ## 📦 Dependencies
 
 > ⚠️ **Important**: The following specific libraries are required for compatibility. Using different versions may cause stability issues.

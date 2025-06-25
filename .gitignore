@@ -1,2 +1,5 @@
 global.cpp
 global.h
+build/esp8266.esp8266.nodemcuv2/Smart-Aquarium-V3_1.ino.bin
+build/esp8266.esp8266.nodemcuv2/Smart-Aquarium-V3_1.ino.elf
+build/esp8266.esp8266.nodemcuv2/Smart-Aquarium-V3_1.ino.map
