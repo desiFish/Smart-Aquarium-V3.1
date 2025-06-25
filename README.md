@@ -209,6 +209,7 @@ All libraries can be installed through the Arduino Library Manager. These specif
    
 6. Filesystem and Future Updates (Wireless/OTA):
    - Press `Ctrl + Shift + P` in Arduino IDE (or follow the [guide](https://randomnerdtutorials.com/arduino-ide-2-install-esp8266-littlefs/)) to launch ESP8266 LittleFS Data Upload tool
+   - **Note:** The LittleFS uploader tool requires a COM port to be selected, even if the ESP8266 is not connected. You must select a port such as `COM3 [Not Connected]` in the Arduino IDE. If no COM port is available, the upload will fail.
    - When it fails (as ESP8266 is not connected via USB), check the error message
    - Locate the generated binary file path from the error message (usually in the temporary build folder)
    ![LittleFS Binary Location](src/littleFS.jpg)     
