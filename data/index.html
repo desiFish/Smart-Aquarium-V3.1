@@ -1158,7 +1158,6 @@
     </footer>
 
     <script>
-        // Add this function at the start of the script section
         function fetchLEDNames() {
             [1, 2, 3, 4].forEach(ledId => {
                 fetch(`/api/led${ledId}/name`)
@@ -1234,7 +1233,7 @@
             });
         }
 
-        // Add this function before setupLED
+        // Function to update Relay status
         function syncModesFromServer() {
             [1, 2, 3, 4].forEach(ledId => {
                 if (!ledStates[ledId].enabled) return;
@@ -1273,8 +1272,7 @@
                     .catch(error => console.error(`Error syncing mode for LED ${ledId}:`, error));
             });
         }
-
-        // Replace the initModesFromServer function
+        // Function to initialize modes from server
         function initModesFromServer() {
             [1, 2, 3, 4].forEach(ledId => {
                 fetch(`/api/led${ledId}/mode`)
@@ -1291,7 +1289,6 @@
                             indicator.classList.remove('active');
                         });
 
-                        // Add active class to current mode indicator
                         const modeSelector = document.querySelector(`#mode${mode.charAt(0).toUpperCase() + mode.slice(1)}_${ledId}`);
                         if (modeSelector) {
                             modeSelector.checked = true;
@@ -1315,7 +1312,6 @@
             });
         }
 
-        // Add this function after fetchLEDStates
         function fetchScheduleTimes() {
             [1, 2, 3, 4].forEach(ledId => {
                 fetch(`/api/led${ledId}/schedule`)
@@ -1934,7 +1930,7 @@
                 });
         }
 
-        // Add this new function to check and update mode indicators
+        // check and update mode indicators
         function updateModeIndicators(ledId) {
             fetch(`/api/led${ledId}/mode`)
                 .then(response => response.text())
@@ -1943,8 +1939,6 @@
                     document.querySelectorAll(`#led${ledId} .mode-indicator`).forEach(indicator => {
                         indicator.classList.remove('active');
                     });
-
-                    // Add active class to current mode's indicator
                     const activeMode = currentMode.toLowerCase().trim();
                     const modeSelector = document.querySelector(`#mode${activeMode.charAt(0).toUpperCase() + activeMode.slice(1)}_${ledId}`);
                     if (modeSelector) {
@@ -1961,7 +1955,7 @@
         function updateLEDStatus(ledId) {
             if (!ledStates[ledId].enabled) return;
 
-            // Add this line to update mode indicators
+            //update mode indicators
             updateModeIndicators(ledId);
 
             const indicator = document.querySelector(`#led${ledId} .status-indicator`);
@@ -2043,7 +2037,6 @@
                 .catch(error => console.error('Error checking RTC sync:', error));
         }
 
-        // Replace existing initialization code with this modified version
         function initializeApp() {
             checkRTCSync(); // Add RTC check at startup
 
@@ -2124,7 +2117,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (!data.success) throw new Error(data.error || 'Failed to update mode');
-                    // Add this line to update indicators immediately
+                    // update indicators immediately
                     updateModeIndicators(ledId);
                     if (newMode === 'timer') {
                         checkTimerState(ledId);

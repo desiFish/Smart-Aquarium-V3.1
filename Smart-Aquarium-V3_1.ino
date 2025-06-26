@@ -23,35 +23,162 @@
 #include <ArduinoJson.h>
 #include <Wire.h>
 #include <ElegantOTA.h>
-#include "global.h" //remove this
 
 // NTP and RTC
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include "RTClib.h"
 
+// Software version
+#define SWVersion "v1.1.0"
+
 RTC_DS3231 rtc;
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "in.pool.ntp.org", 19800); // 19800 = UTC+5:30 for India, check Readme for more details
 
-// Software version
-#define SWVersion "v1.0.1"
+// --- NTP/Timezone config variables ---
+String ntpServer;
+int timezoneOffset;
+String timezoneString;
+
+// NTP client instance (will be re-created if settings change)
+NTPClient timeClient(ntpUDP, ntpServer.c_str(), timezoneOffset); // check Readme for more details
+
+// --- NTP config persistence ---
+void saveNtpConfigToFS()
+{
+    JsonDocument doc;
+    doc["ntpServer"] = ntpServer;
+    doc["timezoneOffset"] = timezoneOffset;
+    doc["timezoneString"] = timezoneString;
+    File f = LittleFS.open("/ntp.json", "w");
+    if (f)
+    {
+        serializeJson(doc, f);
+        f.close();
+    }
+}
+
+void loadNtpConfigFromFS()
+{
+    Serial.println("[DEBUG] loadNtpConfigFromFS called");
+    if (!LittleFS.exists("/ntp.json"))
+    {
+        Serial.println("[DEBUG] /ntp.json not found, using defaults");
+        ntpServer = "in.pool.ntp.org";
+        timezoneOffset = 19800;
+        timezoneString = "+5:30";
+        return;
+    }
+    File f = LittleFS.open("/ntp.json", "r");
+    if (!f)
+    {
+        Serial.println("[DEBUG] Failed to open /ntp.json, using defaults");
+        return;
+    }
+    Serial.println("[DEBUG] /ntp.json opened successfully");
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, f);
+    f.close();
+    if (!err)
+    {
+        Serial.println("[DEBUG] NTP config loaded from JSON");
+        ntpServer = doc["ntpServer"] | "in.pool.ntp.org";
+        timezoneOffset = doc["timezoneOffset"] | 19800;
+        timezoneString = doc["timezoneString"] | "+5:30";
+    }
+    else
+    {
+        Serial.print("[DEBUG] NTP config JSON error: ");
+        Serial.println(err.c_str());
+    }
+}
+
+// WiFi config persistence
+void saveWifiConfigToFS(const String &ssidVal, const String &passwordVal,
+                        const String &ip, const String &gateway, const String &subnet,
+                        const String &dns1, const String &dns2, bool useStaticIp)
+{
+    Serial.println("[DEBUG] saveWifiConfigToFS called");
+    JsonDocument doc;
+    doc["ssid"] = ssidVal;
+    doc["password"] = passwordVal;
+    if (ip.length())
+        doc["ip"] = ip;
+    if (gateway.length())
+        doc["gateway"] = gateway;
+    if (subnet.length())
+        doc["subnet"] = subnet;
+    if (dns1.length())
+        doc["dns1"] = dns1;
+    if (dns2.length())
+        doc["dns2"] = dns2;
+    doc["useStaticIp"] = useStaticIp;
+    File f = LittleFS.open("/wifi.json", "w");
+    if (f)
+    {
+        Serial.println("[DEBUG] /wifi.json opened for writing");
+        serializeJson(doc, f);
+        f.close();
+        Serial.println("[DEBUG] /wifi.json written and closed");
+    }
+    else
+    {
+        Serial.println("[DEBUG] Failed to open /wifi.json for writing");
+    }
+}
+
+void loadWifiConfigFromFS(String &ssidVal, String &passwordVal,
+                          String *ip, String *gateway, String *subnet,
+                          String *dns1, String *dns2, bool *useStaticIp)
+{
+    Serial.println("[DEBUG] loadWifiConfigFromFS called");
+    if (!LittleFS.exists("/wifi.json"))
+    {
+        Serial.println("[DEBUG] /wifi.json not found, using defaults");
+        return;
+    }
+    File f = LittleFS.open("/wifi.json", "r");
+    if (!f)
+    {
+        Serial.println("[DEBUG] Failed to open /wifi.json, using defaults");
+        return;
+    }
+    Serial.println("[DEBUG] /wifi.json opened successfully");
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, f);
+    f.close();
+    if (!err)
+    {
+        Serial.println("[DEBUG] WiFi config loaded from JSON");
+        ssidVal = doc["ssid"] | ssidVal;
+        passwordVal = doc["password"] | passwordVal;
+        if (ip)
+            *ip = doc["ip"] | "";
+        if (gateway)
+            *gateway = doc["gateway"] | "";
+        if (subnet)
+            *subnet = doc["subnet"] | "";
+        if (dns1)
+            *dns1 = doc["dns1"] | "";
+        if (dns2)
+            *dns2 = doc["dns2"] | "";
+        if (useStaticIp)
+            *useStaticIp = doc["useStaticIp"] | false;
+    }
+    else
+    {
+        Serial.print("[DEBUG] WiFi config JSON error: ");
+        Serial.println(err.c_str());
+    }
+}
 
 // WiFi credentials
-const char *ssid = pssid;     // replace "pssid" and with your Wifi Name a.k.a SSID (STRING type)
-const char *password = ppass; // replace "ppass" with WIFI Password (STRING type)
+String wifiSsid;
+String wifiPassword;
+String wifiIp, wifiGateway, wifiSubnet, wifiDns1, wifiDns2;
+bool wifiUseStaticIp = false;
 
 AsyncWebServer server(80);
-
-// Set your Static IP address
-IPAddress local_IP(192, 168, 29, 123);
-// Set your Gateway IP address
-IPAddress gateway(192, 168, 29, 1);
-
-IPAddress subnet(255, 255, 255, 0);
-
-IPAddress primaryDNS(1, 1, 1, 1);   // optional
-IPAddress secondaryDNS(1, 0, 0, 1); // optional
 
 unsigned long ota_progress_millis = 0;
 
@@ -81,7 +208,7 @@ void onOTAEnd(bool success)
     }
 }
 
-// ESP8266 compatible pins for relays
+// ESP8266 gpio pins for relays
 const byte RELAY_PINS[] = {0, 12, 13, 14};
 const byte NUM_RELAYS = 4;
 
@@ -106,9 +233,11 @@ private:
     bool toggleActive;
     void loadFromFS()
     {
+        Serial.printf("[DEBUG] Relay %d: loadFromFS called\n", relayNum);
         File configFile = LittleFS.open("/config/relay" + String(relayNum) + ".json", "r");
         if (!configFile)
         {
+            Serial.printf("[DEBUG] Relay %d: Config file missing, using defaults\n", relayNum);
             // Use defaults if no config file exists
             name = "Relay " + String(relayNum);
             mode = "manual";
@@ -116,9 +245,15 @@ private:
             isDisabled = false;
             onTime = 0;
             offTime = 0;
+            // Toggle defaults
+            toggleOnMinutes = 0;
+            toggleOffMinutes = 0;
+            toggleActive = false;
+            toggleStart = 0;
         }
         else
         {
+            Serial.printf("[DEBUG] Relay %d: Config file opened\n", relayNum);
             String jsonStr = configFile.readString();
             configFile.close();
 
@@ -127,23 +262,74 @@ private:
 
             if (!error)
             {
+                Serial.printf("[DEBUG] Relay %d: Config loaded from JSON\n", relayNum);
                 isOn = doc["isOn"] | false;
                 isDisabled = doc["isDisabled"] | false;
                 onTime = doc["onTime"] | 0;
                 offTime = doc["offTime"] | 0;
                 name = doc["name"] | ("Relay " + String(relayNum));
                 mode = doc["mode"] | "manual";
+                // Restore toggle mode settings
+                toggleOnMinutes = doc["toggleOnMinutes"] | 0;
+                toggleOffMinutes = doc["toggleOffMinutes"] | 0;
+                toggleActive = doc["toggleActive"] | false;
+                toggleStart = doc["toggleStart"] | 0;
+                // Restore timer mode settings
+                timerDuration = doc["timerDuration"] | 0;
+                timerActive = doc["timerActive"] | false;
+                timerStart = doc["timerStart"] | 0;
+
+                // Adjust toggleStart to resume correct ON/OFF phase after reboot
+                if (toggleActive && (toggleOnMinutes > 0 || toggleOffMinutes > 0))
+                {
+                    unsigned long totalCycleSeconds = (toggleOnMinutes + toggleOffMinutes) * 60UL;
+                    if (totalCycleSeconds > 0)
+                    {
+                        unsigned long now = millis() / 1000UL;
+                        unsigned long elapsed = now - toggleStart;
+                        unsigned long cycleSeconds = elapsed % totalCycleSeconds;
+                        bool shouldBeOn = cycleSeconds < (toggleOnMinutes * 60UL);
+                        if (shouldBeOn != isOn)
+                        {
+                            // Adjust toggleStart so that the relay resumes in the correct phase
+                            if (isOn)
+                            {
+                                // Should be ON: set toggleStart so cycleSeconds = something < toggleOnMinutes*60
+                                unsigned long offset = cycleSeconds - (toggleOnMinutes * 60UL) + totalCycleSeconds;
+                                toggleStart = now - ((elapsed - offset) % totalCycleSeconds);
+                            }
+                            else
+                            {
+                                // Should be OFF: set toggleStart so cycleSeconds = something >= toggleOnMinutes*60
+                                unsigned long offset = cycleSeconds - (toggleOnMinutes * 60UL);
+                                toggleStart = now - ((elapsed - offset) % totalCycleSeconds);
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Serial.printf("[DEBUG] Relay %d: Config file corrupt, using defaults. Error: %s\n", relayNum, error.c_str());
+                // Use defaults if config is corrupt
+                name = "Relay " + String(relayNum);
+                mode = "manual";
+                isOn = false;
+                isDisabled = false;
+                onTime = 0;
+                offTime = 0;
+                // Toggle defaults
+                toggleOnMinutes = 0;
+                toggleOffMinutes = 0;
+                toggleActive = false;
+                toggleStart = 0;
             }
         }
 
-        // Runtime states always start fresh
+        // Runtime states always start fresh except toggle
         timerActive = false;
         timerStart = 0;
         timerDuration = 0;
-        toggleActive = false;
-        toggleStart = 0;
-        toggleOnMinutes = 0;
-        toggleOffMinutes = 0;
     }
 
     void saveToFS()
@@ -161,6 +347,15 @@ private:
         doc["offTime"] = offTime;
         doc["name"] = name;
         doc["mode"] = mode;
+        // Save toggle mode settings
+        doc["toggleOnMinutes"] = toggleOnMinutes;
+        doc["toggleOffMinutes"] = toggleOffMinutes;
+        doc["toggleActive"] = toggleActive;
+        doc["toggleStart"] = toggleStart;
+        // Save timer mode settings
+        doc["timerDuration"] = timerDuration;
+        doc["timerActive"] = timerActive;
+        doc["timerStart"] = timerStart;
 
         File configFile = LittleFS.open("/config/relay" + String(relayNum) + ".json", "w");
         if (configFile)
@@ -229,6 +424,7 @@ public:
             Serial.printf("Relay %d: Toggle mode stopped\n", relayNum);
             stopToggle();
         }
+        saveToFS(); // Save toggle mode settings
     }
     void turnOn()
     {
@@ -251,6 +447,7 @@ public:
             isOn = false;
             digitalWrite(pin, LOW);
         }
+        saveToFS(); // Save toggle mode settings
     }
 
     // Getters and setters
@@ -321,6 +518,7 @@ public:
             Serial.printf("Relay %d: Timer stopped\n", relayNum);
             endTimer(maintainState);
         }
+        saveToFS(); // Save timer mode settings
     }
     bool isTimerActive() { return timerActive; }
     int getTimerDuration() { return timerDuration; }
@@ -411,6 +609,7 @@ private:
             isOn = false;
             digitalWrite(pin, LOW);
         }
+        saveToFS(); // Save timer mode settings
     }
 };
 
@@ -433,6 +632,8 @@ bool ensureConfigDirectory()
     return true;
 }
 
+volatile bool shouldReboot = false;
+
 void setup()
 {
     Serial.begin(115200);
@@ -449,20 +650,112 @@ void setup()
         LittleFS.mkdir("/config");
     }
 
-    // Configures static IP address
-    if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS))
+    // Load WiFi config from FS (before WiFi.begin)
+    loadWifiConfigFromFS(wifiSsid, wifiPassword, &wifiIp, &wifiGateway, &wifiSubnet, &wifiDns1, &wifiDns2, &wifiUseStaticIp);
+
+    // Load NTP config from FS (before NTPClient is used)
+    loadNtpConfigFromFS();
+    timeClient = NTPClient(ntpUDP, ntpServer.c_str(), timezoneOffset);
+
+    bool wifiConfigured = wifiSsid.length() > 0 /*&& wifiPassword.length() > 0*/;
+
+    if (wifiConfigured)
     {
-        Serial.println("STA Failed to configure");
+        bool staticIpOk = true;
+        if (wifiUseStaticIp && wifiIp.length() && wifiGateway.length() && wifiSubnet.length())
+        {
+            Serial.println("Using static IP configuration");
+            IPAddress ip, gateway, subnet, dns1, dns2;
+            staticIpOk = ip.fromString(wifiIp) && gateway.fromString(wifiGateway) && subnet.fromString(wifiSubnet);
+            if (wifiDns1.length())
+                dns1.fromString(wifiDns1);
+            else
+                dns1 = IPAddress(1, 1, 1, 1);
+            if (wifiDns2.length())
+                dns2.fromString(wifiDns2);
+            else
+                dns2 = IPAddress(1, 0, 0, 1);
+
+            if (staticIpOk)
+            {
+                if (!WiFi.config(ip, gateway, subnet, dns1, dns2))
+                {
+                    Serial.println("STA Failed to configure static IP");
+                    staticIpOk = false;
+                }
+            }
+            else
+            {
+                Serial.println("Invalid static IP configuration");
+            }
+        }
+        if (!staticIpOk)
+        {
+            // Mark as not configured so AP mode is started
+            wifiConfigured = false;
+        }
+        else
+        {
+            WiFi.mode(WIFI_STA);
+            WiFi.begin(wifiSsid.c_str(), wifiPassword.c_str());
+            Serial.printf("Connecting to WiFi SSID: %s\n", wifiSsid.c_str());
+            unsigned long startAttemptTime = millis();
+            while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 20000)
+            {
+                delay(500);
+                Serial.print(".");
+            }
+            if (WiFi.status() == WL_CONNECTED)
+            {
+                Serial.println("\nConnected to WiFi");
+                Serial.println(WiFi.localIP());
+            }
+            else
+            {
+                Serial.println("\nWiFi connection failed, switching to AP mode");
+                wifiConfigured = false;
+            }
+        }
     }
 
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED)
+    // ensure AP mode if WiFi is not connected
+    if (!wifiConfigured || WiFi.status() != WL_CONNECTED)
     {
-        delay(500);
-        Serial.print(".");
+        // Start in AP mode for configuration
+        WiFi.mode(WIFI_AP);
+        String apSsid = "Aquarium-Setup";
+        String apPassword = "12345678";
+        WiFi.softAP(apSsid.c_str(), apPassword.c_str());
+        IPAddress apIP = WiFi.softAPIP();
+        Serial.print("Started AP mode. Connect to WiFi SSID: ");
+        Serial.println(apSsid);
+        Serial.print("AP IP address: ");
+        Serial.println(apIP);
+        Serial.println("Use the web interface to configure WiFi.");
+
+        // Optionally, try to connect to any pre-configured WiFi (if present)
+        if (wifiSsid.length() > 0)
+        {
+            WiFi.begin(wifiSsid.c_str(), wifiPassword.c_str());
+            Serial.printf("Attempting STA connection to SSID: %s\n", wifiSsid.c_str());
+            unsigned long startAttemptTime = millis();
+            while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 10000)
+            {
+                delay(500);
+                Serial.print(".");
+            }
+            if (WiFi.status() == WL_CONNECTED)
+            {
+                Serial.println("\nSTA connected in AP+STA mode.");
+                Serial.print("STA IP address: ");
+                Serial.println(WiFi.localIP());
+            }
+            else
+            {
+                Serial.println("\nSTA not connected in AP+STA mode.");
+            }
+        }
     }
-    Serial.println("\nConnected to WiFi");
-    Serial.println(WiFi.localIP());
 
     if (!rtc.begin())
     {
@@ -514,6 +807,7 @@ void loop()
                 relays[i]->endTimer(true); // Stop timer and keep the toggled state
             }
         }
+        yield(); // Prevent WDT reset during heavy operations
     }
 
     // Check toggles
@@ -523,6 +817,7 @@ void loop()
         {
             relays[i]->updateToggleState();
         }
+        yield(); // Prevent WDT reset during heavy operations
     }
 
     // Check schedules every second
@@ -540,14 +835,29 @@ void loop()
                     relays[i]->toggle();
                 }
             }
+            yield(); // Prevent WDT reset during heavy operations
         }
     }
 
     delay(50); // Small delay to prevent watchdog reset
+
+    // Handle reboot outside async callbacks
+    if (shouldReboot)
+    {
+        Serial.println("Graceful reboot: stopping server...");
+        server.end();
+        delay(200); // let response finish sending
+        ESP.restart();
+    }
 }
 
 bool rtcTimeUpdater()
 {
+    if (!rtc.begin())
+    {
+        Serial.println("[DEBUG] RTC not found in rtcTimeUpdater");
+        return false;
+    }
     if (WiFi.status() == WL_CONNECTED)
     {
         timeClient.begin();
@@ -580,15 +890,98 @@ void setupServer()
 
     // Status endpoint
     server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request)
-              { request->send(200, "text/plain", "true"); });
+              { Serial.println("[DEBUG] /api/status endpoint called"); request->send(200, "text/plain", "true"); });
 
     // Version endpoint
     server.on("/api/version", HTTP_GET, [](AsyncWebServerRequest *request)
-              { request->send(200, "text/plain", SWVersion); });
+              { Serial.println("[DEBUG] /api/version endpoint called"); request->send(200, "text/plain", SWVersion); });
 
-    // Add RTC time endpoint
-    server.on("/api/rtctime", HTTP_GET, [](AsyncWebServerRequest *request)
+    // WiFi info endpoint (GET)
+    server.on("/api/wifi", HTTP_GET, [](AsyncWebServerRequest *request)
+              { Serial.println("[DEBUG] /api/wifi (GET) endpoint called");
+        JsonDocument doc;
+        doc["ssid"] = wifiSsid;
+        doc["password"] = wifiPassword;
+
+        // Use current network info if connected, else fallback to config
+        if (WiFi.status() == WL_CONNECTED) {
+            doc["ip"] = WiFi.localIP().toString();
+            doc["gateway"] = WiFi.gatewayIP().toString();
+            doc["subnet"] = WiFi.subnetMask().toString();
+            doc["dns1"] = WiFi.dnsIP(0).toString();
+            doc["dns2"] = WiFi.dnsIP(1).toString();
+        } else {
+            doc["ip"] = wifiIp;
+            doc["gateway"] = wifiGateway;
+            doc["subnet"] = wifiSubnet;
+            doc["dns1"] = wifiDns1;
+            doc["dns2"] = wifiDns2;
+        }
+        doc["useStaticIp"] = wifiUseStaticIp;
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response); });
+
+    // WiFi update endpoint (POST)
+    server.on("/api/wifi", HTTP_POST, [](AsyncWebServerRequest *request)
+              { Serial.println("[DEBUG] /api/wifi (POST) endpoint called");
+        String ssid = "";
+        String password = "";
+        String ipStr = "", gatewayStr = "", subnetStr = "", dns1Str = "", dns2Str = "";
+        bool useStaticIp = false;
+
+        int params = request->params();
+        for (int i = 0; i < params; i++) {
+            const AsyncWebParameter *p = request->getParam(i);
+            if (p->isPost()) {
+                if (p->name() == "ssid") ssid = p->value();
+                else if (p->name() == "password") password = p->value();
+                else if (p->name() == "ip") ipStr = p->value();
+                else if (p->name() == "gateway") gatewayStr = p->value();
+                else if (p->name() == "subnet") subnetStr = p->value();
+                else if (p->name() == "dns1") dns1Str = p->value();
+                else if (p->name() == "dns2") dns2Str = p->value();
+                else if (p->name() == "useStaticIp") useStaticIp = (p->value() == "true" || p->value() == "1" || p->value() == "on");
+            }
+        }
+
+        ssid.trim();
+        password.trim();
+        ipStr.trim();
+        gatewayStr.trim();
+        subnetStr.trim();
+        dns1Str.trim();
+        dns2Str.trim();
+
+        if (ssid.length() == 0) {
+            request->send(400, "application/json", "{\"success\":false,\"error\":\"Missing SSID\"}");
+            return;
+        }
+
+        saveWifiConfigToFS(ssid, password, ipStr, gatewayStr, subnetStr, dns1Str, dns2Str, useStaticIp);
+
+        // Send JSON success
+        JsonDocument resp;
+        resp["success"] = true;
+        resp["info"] = "WiFi settings saved. Device will reboot shortly.";
+        String response;
+        serializeJson(resp, response);
+        Serial.println("WiFi settings saved, device will reboot shortly.");
+        request->send(200, "application/json", response);
+        return; });
+
+    // reboot endpoint for JS-triggered reboot after message is shown
+    server.on("/api/reboot", HTTP_POST, [](AsyncWebServerRequest *request)
               {
+                  Serial.println("[DEBUG] /api/reboot endpoint called");
+                  request->send(200, "application/json", "{\"success\":true,\"info\":\"Rebooting...\"}");
+                  Serial.println("Rebooting ESP8266...");
+                  shouldReboot = true; // Set flag for reboot in loop()
+              });
+
+    // RTC time endpoint
+    server.on("/api/rtctime", HTTP_GET, [](AsyncWebServerRequest *request)
+              { Serial.println("[DEBUG] /api/rtctime endpoint called");
         if (!rtc.begin()) {
             request->send(200, "text/plain", "RTC_FAILED");
             return;
@@ -598,6 +991,45 @@ void setupServer()
         sprintf(timeStr, "%02d:%02d", now.hour(), now.minute());
         request->send(200, "text/plain", timeStr); });
 
+    // NTP/Timezone settings endpoint
+    server.on("/api/ntp", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t, size_t)
+              {
+            Serial.println("[DEBUG] /api/ntp (POST) endpoint called");
+            String json = String((char*)data);
+            JsonDocument doc;
+            DeserializationError error = deserializeJson(doc, json);
+            if (!error && doc["ntpServer"] && doc["offset"].is<int>()) {
+                String newNtpServer = doc["ntpServer"].as<String>();
+                int newOffset = doc["offset"].as<int>();
+                String newTimezone = doc["timezone"] | "";
+                // Save to variables
+                ntpServer = newNtpServer;
+                timezoneOffset = newOffset;
+                timezoneString = newTimezone;
+                // Save to FS
+                saveNtpConfigToFS();
+                // Re-initialize NTPClient
+                timeClient.end();
+                timeClient = NTPClient(ntpUDP, ntpServer.c_str(), timezoneOffset);
+                // Immediately update RTC from new NTP config
+                rtcTimeUpdater();
+                Serial.println("8");
+                request->send(200, "application/json", "{\"success\":true}");
+            } else {
+                request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid data\"}");
+            } });
+
+    // NTP/Timezone GET endpoint for config download
+    server.on("/api/ntp", HTTP_GET, [](AsyncWebServerRequest *request)
+              { Serial.println("[DEBUG] /api/ntp (GET) endpoint called");
+        JsonDocument doc;
+        doc["ntpServer"] = ntpServer;
+        doc["timezoneOffset"] = timezoneOffset;
+        doc["timezoneString"] = timezoneString;
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response); });
+
     // Set up endpoints for each relay
     for (byte i = 1; i <= NUM_RELAYS; i++)
     {
@@ -606,9 +1038,32 @@ void setupServer()
 
     // Time update endpoint
     server.on("/api/time/update", HTTP_POST, [](AsyncWebServerRequest *request)
-              {
+              { Serial.println("[DEBUG] /api/time/update endpoint called");
         updateTime = true;
         request->send(200, "text/plain", "Time update scheduled"); });
+
+    // Clock endpoint: returns time (HH:MM), date (YYYY-MM-DD), and day of week
+    server.on("/api/clock", HTTP_GET, [](AsyncWebServerRequest *request)
+              { Serial.println("[DEBUG] /api/clock endpoint called");
+        if (!rtc.begin()) {
+            request->send(200, "application/json", "{\"error\":\"RTC_FAILED\"}");
+            return;
+        }
+        DateTime now = rtc.now();
+        char timeStr[6];
+        sprintf(timeStr, "%02d:%02d", now.hour(), now.minute());
+        char dateStr[11];
+        sprintf(dateStr, "%04d-%02d-%02d", now.year(), now.month(), now.day());
+        const char* daysOfWeek[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+        const char* dow = daysOfWeek[now.dayOfTheWeek() % 7];
+
+        JsonDocument doc;
+        doc["time"] = timeStr;
+        doc["date"] = dateStr;
+        doc["dow"] = dow;
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response); });
 }
 
 void setupRelayEndpoints(byte relayIndex)
@@ -616,9 +1071,9 @@ void setupRelayEndpoints(byte relayIndex)
     String baseEndpoint = "/api/led" + String(relayIndex);
     byte idx = relayIndex - 1;
 
-    // Status endpoint (toggle) - Update to return consistent format
-    server.on((baseEndpoint + "/status").c_str(), HTTP_GET, [idx](AsyncWebServerRequest *request)
-              {
+    // Status endpoint (toggle)
+    server.on((baseEndpoint + "/status").c_str(), HTTP_GET, [idx, baseEndpointStr = baseEndpoint](AsyncWebServerRequest *request)
+              { Serial.printf("[API] %s/status GET called\n", baseEndpointStr.c_str());
                 JsonDocument doc;
                 doc["success"] = true;
                 doc["state"] = relays[idx]->getState() ? "ON" : "OFF";
@@ -626,9 +1081,9 @@ void setupRelayEndpoints(byte relayIndex)
                 serializeJson(doc, response);
                 request->send(200, "application/json", response); });
 
-    // System state endpoints - Update to use consistent error handling
-    server.on((baseEndpoint + "/system/state").c_str(), HTTP_GET, [idx](AsyncWebServerRequest *request)
-              {
+    // System state endpoints
+    server.on((baseEndpoint + "/system/state").c_str(), HTTP_GET, [idx, baseEndpointStr = baseEndpoint](AsyncWebServerRequest *request)
+              { Serial.printf("[API] %s/system/state GET called\n", baseEndpointStr.c_str());
                   JsonDocument doc;
                   doc["success"] = true;
                   doc["enabled"] = relays[idx]->isEnabled();
@@ -641,8 +1096,9 @@ void setupRelayEndpoints(byte relayIndex)
     server.on((baseEndpoint + "/system/state").c_str(), HTTP_POST,
               [](AsyncWebServerRequest *request) {},
               NULL,
-              [idx](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t /*index*/, size_t /*total*/)
+              [idx, baseEndpointStr = baseEndpoint](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t /*index*/, size_t /*total*/)
               {
+                  Serial.printf("[API] %s/system/state POST called\n", baseEndpointStr.c_str());
                   String json = String((char *)data);
                   JsonDocument inputDoc;
                   JsonDocument responseDoc;
@@ -679,15 +1135,16 @@ void setupRelayEndpoints(byte relayIndex)
               });
 
     // Name endpoints
-    server.on((baseEndpoint + "/name").c_str(), HTTP_GET, [idx](AsyncWebServerRequest *request)
-              { request->send(200, "text/plain", relays[idx]->getName()); });
+    server.on((baseEndpoint + "/name").c_str(), HTTP_GET, [idx, baseEndpointStr = baseEndpoint](AsyncWebServerRequest *request)
+              { Serial.printf("[API] %s/name GET called\n", baseEndpointStr.c_str());
+                request->send(200, "text/plain", relays[idx]->getName()); });
 
-    // POST handler for setting name
     server.on((baseEndpoint + "/name").c_str(), HTTP_POST,
               [](AsyncWebServerRequest *request) {},
               NULL,
-              [idx](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t /*index*/, size_t /*total*/)
+              [idx, baseEndpointStr = baseEndpoint](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t /*index*/, size_t /*total*/)
               {
+                  Serial.printf("[API] %s/name POST called\n", baseEndpointStr.c_str());
                   String json = String((char *)data);
                   JsonDocument doc;
                   DeserializationError error = deserializeJson(doc, json);
@@ -704,9 +1161,9 @@ void setupRelayEndpoints(byte relayIndex)
                   }
               });
 
-    // Toggle endpoint - Update to return consistent format
-    server.on((baseEndpoint + "/toggle").c_str(), HTTP_POST, [idx](AsyncWebServerRequest *request)
-              {
+    // Toggle endpoint
+    server.on((baseEndpoint + "/toggle").c_str(), HTTP_POST, [idx, baseEndpointStr = baseEndpoint](AsyncWebServerRequest *request)
+              { Serial.printf("[API] %s/toggle POST called\n", baseEndpointStr.c_str());
                 JsonDocument doc;
                 relays[idx]->toggle();
                 doc["success"] = true;
@@ -716,14 +1173,16 @@ void setupRelayEndpoints(byte relayIndex)
                 request->send(200, "application/json", response); });
 
     // Mode endpoint
-    server.on((baseEndpoint + "/mode").c_str(), HTTP_GET, [idx](AsyncWebServerRequest *request)
-              { request->send(200, "text/plain", relays[idx]->getMode()); });
+    server.on((baseEndpoint + "/mode").c_str(), HTTP_GET, [idx, baseEndpointStr = baseEndpoint](AsyncWebServerRequest *request)
+              { Serial.printf("[API] %s/mode GET called\n", baseEndpointStr.c_str());
+                request->send(200, "text/plain", relays[idx]->getMode()); });
 
     server.on((baseEndpoint + "/mode").c_str(), HTTP_POST,
               [](AsyncWebServerRequest *request) {},
               NULL,
-              [idx](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t /*index*/, size_t /*total*/)
+              [idx, baseEndpointStr = baseEndpoint](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t /*index*/, size_t /*total*/)
               {
+                  Serial.printf("[API] %s/mode POST called\n", baseEndpointStr.c_str());
                   String json = String((char *)data);
                   JsonDocument doc;
                   DeserializationError error = deserializeJson(doc, json);
@@ -741,8 +1200,8 @@ void setupRelayEndpoints(byte relayIndex)
               });
 
     // Schedule endpoint
-    server.on((baseEndpoint + "/schedule").c_str(), HTTP_GET, [idx](AsyncWebServerRequest *request)
-              {
+    server.on((baseEndpoint + "/schedule").c_str(), HTTP_GET, [idx, baseEndpointStr = baseEndpoint](AsyncWebServerRequest *request)
+              { Serial.printf("[API] %s/schedule GET called\n", baseEndpointStr.c_str());
         JsonDocument doc;
         doc["onTime"] = relays[idx]->getOnTime();
         doc["offTime"] = relays[idx]->getOffTime();
@@ -754,8 +1213,9 @@ void setupRelayEndpoints(byte relayIndex)
     server.on((baseEndpoint + "/schedule").c_str(), HTTP_POST,
               [](AsyncWebServerRequest *request) {},
               NULL,
-              [idx](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t /*index*/, size_t /*total*/)
+              [idx, baseEndpointStr = baseEndpoint](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t /*index*/, size_t /*total*/)
               {
+                  Serial.printf("[API] %s/schedule POST called\n", baseEndpointStr.c_str());
                   String json = String((char *)data);
                   JsonDocument doc;
                   JsonDocument response;
@@ -791,8 +1251,9 @@ void setupRelayEndpoints(byte relayIndex)
     server.on((baseEndpoint + "/timer").c_str(), HTTP_POST,
               [](AsyncWebServerRequest *request) {},
               NULL,
-              [idx](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t /*index*/, size_t /*total*/)
+              [idx, baseEndpointStr = baseEndpoint](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t /*index*/, size_t /*total*/)
               {
+                  Serial.printf("[API] %s/timer POST called\n", baseEndpointStr.c_str());
                   String json = String((char *)data);
                   JsonDocument doc;
                   JsonDocument response;
@@ -821,8 +1282,8 @@ void setupRelayEndpoints(byte relayIndex)
                   request->send(200, "application/json", responseStr);
               });
 
-    server.on((baseEndpoint + "/timer/state").c_str(), HTTP_GET, [idx](AsyncWebServerRequest *request)
-              {
+    server.on((baseEndpoint + "/timer/state").c_str(), HTTP_GET, [idx, baseEndpointStr = baseEndpoint](AsyncWebServerRequest *request)
+              { Serial.printf("[API] %s/timer/state GET called\n", baseEndpointStr.c_str());
                   JsonDocument doc;
                   doc["success"] = true;
                   doc["active"] = relays[idx]->isTimerActive();
@@ -837,8 +1298,9 @@ void setupRelayEndpoints(byte relayIndex)
     server.on((baseEndpoint + "/toggle-mode").c_str(), HTTP_POST,
               [](AsyncWebServerRequest *request) {},
               NULL,
-              [idx](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t /*index*/, size_t /*total*/)
+              [idx, baseEndpointStr = baseEndpoint](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t /*index*/, size_t /*total*/)
               {
+                  Serial.printf("[API] %s/toggle-mode POST called\n", baseEndpointStr.c_str());
                   String json = String((char *)data);
                   JsonDocument doc;
                   JsonDocument response;
@@ -870,8 +1332,8 @@ void setupRelayEndpoints(byte relayIndex)
                   request->send(200, "application/json", responseStr);
               });
 
-    server.on((baseEndpoint + "/toggle-mode/state").c_str(), HTTP_GET, [idx](AsyncWebServerRequest *request)
-              {
+    server.on((baseEndpoint + "/toggle-mode/state").c_str(), HTTP_GET, [idx, baseEndpointStr = baseEndpoint](AsyncWebServerRequest *request)
+              { Serial.printf("[API] %s/toggle-mode/state GET called\n", baseEndpointStr.c_str());
                   JsonDocument doc;
                   doc["success"] = true;
                   doc["active"] = relays[idx]->isToggleActive();

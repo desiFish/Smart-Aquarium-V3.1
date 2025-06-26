@@ -132,6 +132,7 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             transition: all 0.3s;
+            margin: 2px;
         }
 
         .nav-btn:hover {
@@ -154,6 +155,17 @@
 
             .page-title {
                 margin-bottom: 0.5rem;
+            }
+
+            .navbar {
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+
+            .nav-btn {
+                width: 100%;
+                box-sizing: border-box;
             }
         }
 
@@ -212,6 +224,94 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #2196F3;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+        }
+
+        #restoreOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(18, 18, 18, 0.85);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .restore-spinner {
+            border: 6px solid #eee;
+            border-top: 6px solid #2196F3;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 18px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .restore-message {
+            color: #fff;
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+            text-align: center;
+        }
     </style>
 </head>
 
@@ -228,8 +328,68 @@
 
     <nav class="navbar">
         <button class="nav-btn" onclick="window.location.href='index.html'">Back</button>
-        <button class="nav-btn" style="margin-left: 10px;" onclick="updateTime()">Update Time</button>
+        <button class="nav-btn" onclick="updateTime()">Update Time</button>
+        <button class="nav-btn" onclick="downloadConfig()">Backup</button>
+        <label class="nav-btn"
+            style="cursor:pointer; text-align:center; display:flex; justify-content:center; align-items:center;">
+            Restore
+            <input type="file" id="restoreConfigInput" accept="application/json" style="display:none"
+                onchange="restoreConfig(event)">
+        </label>
     </nav>
+
+    <!-- Clock Display -->
+    <div class="settings-container" style="max-width:600px; margin-top:10px; text-align:center;">
+        <span id="clockDisplay" style="font-size:1.3rem; color:#4CAF50; letter-spacing:1px;">--:-- --, ----
+            --/--/----</span>
+    </div>
+
+    <!-- WiFi Settings -->
+    <div class="settings-container" style="max-width:600px; margin-top:10px;">
+        <h3 class="settings-title">WiFi Settings</h3>
+        <form id="wifiForm" autocomplete="off">
+            <label for="wifiSsidInput">SSID:</label>
+            <input type="text" id="wifiSsidInput" name="ssid" class="name-input" placeholder="Loading..."
+                autocomplete="off">
+            <label for="wifiPasswordInput" style="margin-top:10px;">Password:</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <input type="password" id="wifiPasswordInput" name="password" class="name-input"
+                    placeholder="Loading..." style="flex:1;" autocomplete="off">
+                <button type="button" class="btn-set" style="padding:6px 12px;"
+                    onclick="toggleWifiPassword()">Show</button>
+            </div>
+            <div style="margin-top:12px;">
+                <label style="font-weight:bold;">Static IP Settings:</label>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+                    <label class="switch">
+                        <input type="checkbox" id="useStaticIpInput" name="useStaticIp">
+                        <span class="slider"></span>
+                    </label>
+                    <span style="font-size:1em;">Use custom static IP</span>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:6px;">
+                    <input type="text" id="ipInput" name="ip" class="name-input" style="flex:1;"
+                        placeholder="IP Address (e.g. 192.168.29.124)">
+                    <input type="text" id="gatewayInput" name="gateway" class="name-input" style="flex:1;"
+                        placeholder="Gateway (e.g. 192.168.29.1)" value="192.168.29.1">
+                </div>
+                <div style="display:flex;gap:8px;margin-top:6px;">
+                    <input type="text" id="subnetInput" name="subnet" class="name-input" style="flex:1;"
+                        placeholder="Subnet (e.g. 255.255.255.0)" value="255.255.255.0">
+                    <input type="text" id="dns1Input" name="dns1" class="name-input" style="flex:1;"
+                        placeholder="Primary DNS (e.g. 1.1.1.1)" value="1.1.1.1">
+                    <input type="text" id="dns2Input" name="dns2" class="name-input" style="flex:1;"
+                        placeholder="Secondary DNS (e.g. 1.0.0.1)" value="1.0.0.1">
+                </div>
+                <button type="button" class="btn-set" style="margin-top:10px;" onclick="setCurrentAsStaticIp()">Make
+                    this static IP</button>
+            </div>
+            <button class="btn-set" style="margin-top:10px;" type="submit">Save WiFi</button>
+        </form>
+        <div id="wifiSaveStatus" style="margin-top:8px;font-size:0.9em;"></div>
+        <div id="wifiRebootMsg" style="margin-top:8px;font-size:1em;color:#4CAF50;display:none;"></div>
+        <div id="wifiNewIpInfo" style="margin-top:8px;font-size:0.95em;color:#4CAF50;display:none;"></div>
+    </div>
 
     <div class="grid-container">
         <div class="settings-container">
@@ -254,10 +414,26 @@
         </div>
     </div>
 
+    <!-- NTP/Timezone Settings -->
+    <div class="settings-container" style="max-width:600px; margin-top:20px;">
+        <h3 class="settings-title">NTP & Timezone Settings</h3>
+        <label for="ntpServerInput">NTP Server:</label>
+        <input type="text" id="ntpServerInput" class="name-input" placeholder="e.g. in.pool.ntp.org">
+        <label for="timezoneInput" style="margin-top:10px;">Timezone (e.g. +5:30, -4:00):</label>
+        <input type="text" id="timezoneInput" class="name-input" placeholder="+5:30">
+        <button class="btn-set" style="margin-top:10px;" onclick="saveNtpSettings()">Save NTP/Timezone</button>
+        <div id="ntpSaveStatus" style="margin-top:8px;font-size:0.9em;"></div>
+    </div>
+
     <footer class="version-footer">
         <span id="versionInfo">Checking version...</span>
         <span class="copyright">&copy; 2025 desiFish. All rights reserved.</span>
     </footer>
+
+    <div id="restoreOverlay" style="display:none">
+        <div class="restore-spinner"></div>
+        <div class="restore-message">Restoring configuration... Please wait.</div>
+    </div>
 
     <script>
         // Connection status check
@@ -356,11 +532,577 @@
                 });
         }
 
+        // Download configuration as JSON file (client-side only)
+        async function downloadConfig() {
+            const overlay = document.getElementById('restoreOverlay');
+            // Set backup-specific message
+            overlay.querySelector('.restore-message').textContent = 'Backing up configuration... Please wait.';
+            overlay.style.display = 'flex';
+            try {
+                // Fetch relay configs
+                const relayIds = [1, 2, 3, 4];
+                const relayPromises = relayIds.map(async (id) => {
+                    const [name, mode, schedule, timer, toggle, sys] = await Promise.all([
+                        fetch(`/api/led${id}/name`).then(r => r.text()).catch(() => null),
+                        fetch(`/api/led${id}/mode`).then(r => r.text()).catch(() => null),
+                        fetch(`/api/led${id}/schedule`).then(r => r.json()).catch(() => ({})),
+                        fetch(`/api/led${id}/timer/state`).then(r => r.json()).catch(() => ({})),
+                        fetch(`/api/led${id}/toggle-mode/state`).then(r => r.json()).catch(() => ({})),
+                        fetch(`/api/led${id}/system/state`).then(r => r.json()).catch(() => ({})),
+                    ]);
+                    // Convert onTime/offTime in schedule from integer to HH:MM string if present
+                    let newSchedule = schedule;
+                    if (mode === "auto" && schedule && typeof schedule.onTime === 'number' && typeof schedule.offTime === 'number') {
+                        const toHHMM = (val) => {
+                            const h = Math.floor(val / 100).toString().padStart(2, '0');
+                            const m = (val % 100).toString().padStart(2, '0');
+                            return `${h}:${m}`;
+                        };
+                        newSchedule = {
+                            ...schedule,
+                            onTime: toHHMM(schedule.onTime),
+                            offTime: toHHMM(schedule.offTime)
+                        };
+                    }
+                    // Only include the configuration relevant to the active mode
+                    let modeConfig = {};
+                    if (mode === "auto") {
+                        modeConfig = { mode, schedule: newSchedule };
+                    } else if (mode === "timer") {
+                        modeConfig = { mode, timer };
+                    } else if (mode === "toggle") {
+                        modeConfig = { mode, toggle };
+                    } else {
+                        modeConfig = { mode };
+                    }
+                    return {
+                        id,
+                        name,
+                        ...modeConfig,
+                        system: sys
+                    };
+                });
+
+                // Attempt to fetch WiFi info (if available)
+                let wifi = {};
+                try {
+                    wifi = await fetch('/api/wifi').then(r => r.json());
+                } catch (e) {
+                    wifi = {
+                        ssid: "Not available (client-side only)",
+                        password: "Not available (client-side only)"
+                    };
+                }
+
+                // Add static IP details from form if useStaticIp is checked
+                const useStaticIp = document.getElementById('useStaticIpInput').checked;
+                if (useStaticIp) {
+                    wifi.useStaticIp = true;
+                    wifi.ip = document.getElementById('ipInput').value;
+                    wifi.gateway = document.getElementById('gatewayInput').value;
+                    wifi.subnet = document.getElementById('subnetInput').value;
+                    wifi.dns1 = document.getElementById('dns1Input').value;
+                    wifi.dns2 = document.getElementById('dns2Input').value;
+                }
+
+                // Fetch NTP config
+                let ntp = {};
+                try {
+                    ntp = await fetch('/api/ntp').then(r => r.json());
+                } catch (e) {
+                    ntp = {
+                        ntpServer: "in.pool.ntp.org",
+                        timezoneOffset: 19800,
+                        timezoneString: "+5:30"
+                    };
+                }
+
+                const relays = await Promise.all(relayPromises);
+                const config = {
+                    generatedAt: new Date().toISOString(),
+                    wifi,
+                    ntp,
+                    relays
+                };
+                const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "aquarium-config.json";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                alert("Failed to download config: " + err);
+            } finally {
+                overlay.style.display = 'none';
+            }
+        }
+
+        // Helper: Convert timezone string (+5:30, -4:00) to seconds offset
+        function timezoneToSeconds(tz) {
+            // Accepts "+5:30", "-4:00", "+09", "-11", etc.
+            const match = tz.match(/^([+-])(\d{1,2})(?::(\d{2}))?$/);
+            if (!match) return null;
+            const sign = match[1] === '+' ? 1 : -1;
+            const hours = parseInt(match[2], 10);
+            const mins = match[3] ? parseInt(match[3], 10) : 0;
+            return sign * (hours * 3600 + mins * 60);
+        }
+
+        // Save NTP/Timezone settings to server
+        async function saveNtpSettings() {
+            const ntpServer = document.getElementById('ntpServerInput').value.trim();
+            const timezone = document.getElementById('timezoneInput').value.trim();
+            const statusDiv = document.getElementById('ntpSaveStatus');
+            statusDiv.textContent = "";
+
+            if (!ntpServer) {
+                statusDiv.textContent = "Please enter NTP server address.";
+                statusDiv.style.color = "#ff5252";
+                return;
+            }
+            if (!timezone) {
+                statusDiv.textContent = "Please enter timezone (e.g. +5:30, -4:00).";
+                statusDiv.style.color = "#ff5252";
+                return;
+            }
+            const offset = timezoneToSeconds(timezone);
+            if (offset === null || isNaN(offset)) {
+                statusDiv.textContent = "Invalid timezone format.";
+                statusDiv.style.color = "#ff5252";
+                return;
+            }
+
+            // Send to server (requires server endpoint implementation)
+            try {
+                const resp = await fetch('/api/ntp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ntpServer,
+                        timezone,
+                        offset
+                    })
+                });
+                if (resp.ok) {
+                    statusDiv.textContent = "NTP/Timezone updated successfully.";
+                    statusDiv.style.color = "#4CAF50";
+                } else {
+                    statusDiv.textContent = "Failed to update NTP/Timezone.";
+                    statusDiv.style.color = "#ff5252";
+                    console.error("NTP update failed: HTTP status", resp.status);
+                }
+            } catch (e) {
+                statusDiv.textContent = "Error communicating with server.";
+                statusDiv.style.color = "#ff5252";
+                console.error("NTP update error:", e);
+            }
+        }
+
+        // WiFi settings logic
+        let currentWifiSsid = "";
+        let currentWifiPassword = "";
+
+        // Fetch current WiFi info and static IP settings and set as value/placeholder
+        function fetchCurrentWifiInfo() {
+            fetch('/api/wifi', { headers: { 'Accept': 'application/json' } })
+                .then(r => {
+                    const ct = r.headers.get("content-type") || "";
+                    if (!ct.includes("application/json")) throw new Error("Not JSON");
+                    return r.json();
+                })
+                .then(data => {
+                    currentWifiSsid = data.ssid || "";
+                    currentWifiPassword = data.password || "";
+                    const ssidInput = document.getElementById('wifiSsidInput');
+                    const pwInput = document.getElementById('wifiPasswordInput');
+                    // Set value if present, else clear value and set placeholder
+                    if (currentWifiSsid) {
+                        ssidInput.value = currentWifiSsid;
+                        ssidInput.placeholder = "";
+                    } else {
+                        ssidInput.value = "";
+                        ssidInput.placeholder = "Enter WiFi SSID";
+                    }
+                    if (currentWifiPassword) {
+                        pwInput.value = currentWifiPassword;
+                        pwInput.placeholder = "";
+                    } else {
+                        pwInput.value = "";
+                        pwInput.placeholder = "Enter password";
+                    }
+                    // Always load current IP/gateway/subnet/dns values from backend (router-assigned if connected)
+                    document.getElementById('ipInput').value = data.ip || "";
+                    document.getElementById('gatewayInput').value = data.gateway || "";
+                    document.getElementById('subnetInput').value = data.subnet || "";
+                    document.getElementById('dns1Input').value = data.dns1 || "";
+                    document.getElementById('dns2Input').value = data.dns2 || "";
+                    document.getElementById('useStaticIpInput').checked = !!data.useStaticIp;
+                    updateMakeStaticBtnState();
+                })
+                .catch((err) => {
+                    document.getElementById('wifiSsidInput').value = "";
+                    document.getElementById('wifiSsidInput').placeholder = "Enter WiFi SSID";
+                    document.getElementById('wifiPasswordInput').value = "";
+                    document.getElementById('wifiPasswordInput').placeholder = "Enter password";
+                    document.getElementById('ipInput').value = "";
+                    document.getElementById('gatewayInput').value = "";
+                    document.getElementById('subnetInput').value = "";
+                    document.getElementById('dns1Input').value = "";
+                    document.getElementById('dns2Input').value = "";
+                    document.getElementById('useStaticIpInput').checked = false;
+                    updateMakeStaticBtnState();
+                });
+        }
+
+        // Clock update logic
+        function updateClockDisplay() {
+            fetch('/api/clock?_=' + Date.now())
+                .then(r => r.json())
+                .then(data => {
+                    const clockElem = document.getElementById('clockDisplay');
+                    if (data && data.error === "RTC_FAILED") {
+                        clockElem.textContent = "RTC ERROR";
+                        console.error("RTC error: RTC_FAILED");
+                    } else if (data && data.time && data.date && data.dow) {
+                        // data.date is expected in format yyyy-mm-dd or similar
+                        let formattedDate = data.date;
+                        if (/^(\d{4})-(\d{2})-(\d{2})$/.test(data.date)) {
+                            const [year, month, day] = data.date.split('-');
+                            formattedDate = `${day}-${month}-${year}`;
+                        }
+                        clockElem.textContent = `${data.time}, ${data.dow} ${formattedDate}`;
+                    } else {
+                        clockElem.textContent = "--:-- --, ---- --/--/----";
+                        console.error("RTC error: Invalid data", data);
+                    }
+                })
+                .catch((err) => {
+                    document.getElementById('clockDisplay').textContent = "RTC ERROR";
+                    console.error("RTC fetch error:", err);
+                });
+        }
+
         // Initialize
         fetchVersion();
         setInterval(checkConnection, 5000);
         checkConnection();
         fetchLEDNames();
+        updateClockDisplay();
+        setInterval(updateClockDisplay, 30000); // every 30 seconds
+
+        // Set current dynamic IP/gateway/subnet/dns as static IP fields and save as static
+        function setCurrentAsStaticIp() {
+            // Set the "Use static IP" checkbox to true
+            document.getElementById('useStaticIpInput').checked = true;
+            // Submit the WiFi form (will use the current values in the fields)
+            document.getElementById('wifiForm').requestSubmit();
+        }
+
+        // On page load, fetch and set current NTP/Timezone values
+        function fetchCurrentNtpSettings() {
+            fetch('/api/ntp', { headers: { 'Accept': 'application/json' } })
+                .then(r => {
+                    const ct = r.headers.get("content-type") || "";
+                    if (!ct.includes("application/json")) throw new Error("Not JSON");
+                    return r.json();
+                })
+                .then(data => {
+                    document.getElementById('ntpServerInput').value = data.ntpServer || '';
+                    document.getElementById('timezoneInput').value = data.timezoneString || '';
+                })
+                .catch(() => {
+                    // fallback: leave fields as-is
+                });
+        }
+        fetchCurrentNtpSettings();
+
+        // Fetch current WiFi info and static IP settings and set as value/placeholder
+        function fetchCurrentWifiInfo() {
+            fetch('/api/wifi', { headers: { 'Accept': 'application/json' } })
+                .then(r => {
+                    const ct = r.headers.get("content-type") || "";
+                    if (!ct.includes("application/json")) throw new Error("Not JSON");
+                    return r.json();
+                })
+                .then(data => {
+                    currentWifiSsid = data.ssid || "";
+                    currentWifiPassword = data.password || "";
+                    const ssidInput = document.getElementById('wifiSsidInput');
+                    const pwInput = document.getElementById('wifiPasswordInput');
+                    // Set value if present, else clear value and set placeholder
+                    if (currentWifiSsid) {
+                        ssidInput.value = currentWifiSsid;
+                        ssidInput.placeholder = "";
+                    } else {
+                        ssidInput.value = "";
+                        ssidInput.placeholder = "Enter WiFi SSID";
+                    }
+                    if (currentWifiPassword) {
+                        pwInput.value = currentWifiPassword;
+                        pwInput.placeholder = "";
+                    } else {
+                        pwInput.value = "";
+                        pwInput.placeholder = "Enter password";
+                    }
+                    // Always load current IP/gateway/subnet/dns values from backend (router-assigned if connected)
+                    document.getElementById('ipInput').value = data.ip || "";
+                    document.getElementById('gatewayInput').value = data.gateway || "";
+                    document.getElementById('subnetInput').value = data.subnet || "";
+                    document.getElementById('dns1Input').value = data.dns1 || "";
+                    document.getElementById('dns2Input').value = data.dns2 || "";
+                    document.getElementById('useStaticIpInput').checked = !!data.useStaticIp;
+                    updateMakeStaticBtnState();
+                })
+                .catch((err) => {
+                    document.getElementById('wifiSsidInput').value = "";
+                    document.getElementById('wifiSsidInput').placeholder = "Enter WiFi SSID";
+                    document.getElementById('wifiPasswordInput').value = "";
+                    document.getElementById('wifiPasswordInput').placeholder = "Enter password";
+                    document.getElementById('ipInput').value = "";
+                    document.getElementById('gatewayInput').value = "";
+                    document.getElementById('subnetInput').value = "";
+                    document.getElementById('dns1Input').value = "";
+                    document.getElementById('dns2Input').value = "";
+                    document.getElementById('useStaticIpInput').checked = false;
+                    updateMakeStaticBtnState();
+                });
+        }
+
+        document.getElementById('wifiForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const statusDiv = document.getElementById('wifiSaveStatus');
+            const rebootDiv = document.getElementById('wifiRebootMsg');
+            statusDiv.textContent = "";
+            rebootDiv.style.display = "none";
+            rebootDiv.textContent = "";
+
+            const ssid = document.getElementById('wifiSsidInput').value.trim();
+            const password = document.getElementById('wifiPasswordInput').value.trim();
+            const ip = document.getElementById('ipInput').value.trim();
+            const gateway = document.getElementById('gatewayInput').value.trim();
+            const subnet = document.getElementById('subnetInput').value.trim();
+            const dns1 = document.getElementById('dns1Input').value.trim();
+            const dns2 = document.getElementById('dns2Input').value.trim();
+            const useStaticIp = document.getElementById('useStaticIpInput').checked;
+
+            if (!ssid) {
+                statusDiv.textContent = "Please enter SSID.";
+                statusDiv.style.color = "#ff5252";
+                return;
+            }
+            if (!password) {
+                statusDiv.textContent = "Please enter password.";
+                statusDiv.style.color = "#ff5252";
+                return;
+            }
+
+            // Build form data
+            const formData = new FormData();
+            formData.append("ssid", ssid);
+            formData.append("password", password);
+            if (ip) formData.append("ip", ip);
+            if (gateway) formData.append("gateway", gateway);
+            if (subnet) formData.append("subnet", subnet);
+            if (dns1) formData.append("dns1", dns1);
+            if (dns2) formData.append("dns2", dns2);
+            formData.append("useStaticIp", useStaticIp ? "true" : "false");
+
+            try {
+                const resp = await fetch('/api/wifi', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    statusDiv.textContent = "";
+                    rebootDiv.style.display = "block";
+                    let ipMsg = "";
+                    if (result.ip) {
+                        ipMsg = `<br><b>Device IP after reboot:</b> <span style="color:#fff;background:#333;padding:2px 8px;border-radius:4px;">${result.ip}</span>`;
+                    }
+                    rebootDiv.innerHTML = "<b>WiFi settings saved!</b><br>The device will reboot in a few seconds.<br>Please reconnect to the new WiFi network if needed.<br>If the device IP changes, use the new IP to access the web interface." + ipMsg;
+                    // Wait 2 seconds, then call /api/reboot to trigger reboot
+                    setTimeout(async () => {
+                        rebootDiv.innerHTML += "<br><span style='color:#aaa;font-size:0.95em;'>Rebooting now...</span>";
+                        await fetch('/api/reboot', { method: 'POST' });
+                    }, 2000);
+                } else {
+                    statusDiv.textContent = result.error || "Failed to update WiFi.";
+                    statusDiv.style.color = "#ff5252";
+                }
+            } catch (e) {
+                statusDiv.textContent = "Error communicating with server.";
+                statusDiv.style.color = "#ff5252";
+            }
+        });
+
+        // On page load, call fetchCurrentWifiInfo ONCE 
+        fetchCurrentWifiInfo();
+
+        // Ensure the Make Static IP button is enabled/disabled correctly on page load and on input
+        const ipInput = document.getElementById('ipInput');
+        const makeStaticBtn = document.querySelector('button[onclick="setCurrentAsStaticIp()"]');
+        function updateMakeStaticBtnState() {
+            makeStaticBtn.disabled = false; // Always enabled, simple button
+        }
+        ipInput.addEventListener('input', updateMakeStaticBtnState);
+        updateMakeStaticBtnState();
+
+        // Enable/disable static IP fields based on the checkbox
+        const useStaticIpInput = document.getElementById('useStaticIpInput');
+        const staticIpFields = [
+            document.getElementById('ipInput'),
+            document.getElementById('gatewayInput'),
+            document.getElementById('subnetInput'),
+            document.getElementById('dns1Input'),
+            document.getElementById('dns2Input')
+        ];
+        function updateStaticIpFieldsState() {
+            const enabled = useStaticIpInput.checked;
+            staticIpFields.forEach(f => f.disabled = !enabled);
+        }
+        useStaticIpInput.addEventListener('change', updateStaticIpFieldsState);
+        // Call once on page load
+        updateStaticIpFieldsState();
+
+        // Show/hide WiFi password
+        function toggleWifiPassword() {
+            const pwInput = document.getElementById('wifiPasswordInput');
+            if (pwInput.type === 'password') {
+                pwInput.type = 'text';
+            } else {
+                pwInput.type = 'password';
+            }
+        }
+
+        // Restore configuration from JSON file
+        async function restoreConfig(event) {
+            const overlay = document.getElementById('restoreOverlay');
+            // Set restore-specific message
+            overlay.querySelector('.restore-message').textContent = 'Restoring configuration... Please wait.';
+            overlay.style.display = 'flex';
+            try {
+                const file = event.target.files[0];
+                if (!file) return;
+                const text = await file.text();
+                const config = JSON.parse(text);
+                // Restore NTP
+                if (config.ntp) {
+                    await fetch('/api/ntp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ntpServer: config.ntp.ntpServer,
+                            timezone: config.ntp.timezoneString,
+                            offset: config.ntp.timezoneOffset
+                        })
+                    });
+                }
+                // Restore relays
+                if (Array.isArray(config.relays)) {
+                    for (const relay of config.relays) {
+                        // 1. Restore system state (enabled/disabled) first
+                        if (relay.system) {
+                            await fetch(`/api/led${relay.id}/system/state`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(relay.system)
+                            });
+                            // Wait a bit to ensure system state is set before mode
+                            await new Promise(res => setTimeout(res, 150));
+                        }
+                        if (relay.name) {
+                            await fetch(`/api/led${relay.id}/name`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ name: relay.name })
+                            });
+                        }
+                        if (relay.mode) {
+                            await fetch(`/api/led${relay.id}/mode`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ mode: relay.mode })
+                            });
+                            await new Promise(res => setTimeout(res, 200));
+                        }
+                        if (relay.mode === 'auto' && relay.schedule) {
+                            console.log('Restoring schedule for relay', relay.id, relay.schedule);
+                            const resp = await fetch(`/api/led${relay.id}/schedule`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(relay.schedule)
+                            });
+                            const result = await resp.text();
+                            console.log('Schedule restore response for relay', relay.id, result);
+                        }
+                        if (relay.mode === 'timer' && relay.timer) {
+                            // Start the timer with the saved duration if duration > 0
+                            const duration = relay.timer.duration || 0;
+                            if (duration > 0) {
+                                await fetch(`/api/led${relay.id}/timer`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ duration: duration, start: true })
+                                });
+                            } else {
+                                // If duration is 0, just stop the timer
+                                await fetch(`/api/led${relay.id}/timer`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ duration: 0, start: false })
+                                });
+                            }
+                        }
+                        if (relay.mode === 'toggle' && relay.toggle) {
+                            // Only send the relevant fields to /toggle-mode
+                            await fetch(`/api/led${relay.id}/toggle-mode`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    onMinutes: relay.toggle.onMinutes,
+                                    offMinutes: relay.toggle.offMinutes,
+                                    start: !!relay.toggle.active
+                                })
+                            });
+                        }
+                        // Set relay ON/OFF if mode is manual and system.state is present
+                        if (relay.mode === 'manual' && relay.system && relay.system.state) {
+                            await fetch(`/api/led${relay.id}/toggle`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ state: relay.system.state })
+                            });
+                        }
+                    }
+                }
+                // Restore WiFi
+                if (config.wifi) {
+                    const wifiForm = new FormData();
+                    wifiForm.append('ssid', config.wifi.ssid || '');
+                    wifiForm.append('password', config.wifi.password || '');
+                    wifiForm.append('useStaticIp', config.wifi.useStaticIp ? 'true' : 'false');
+                    if (config.wifi.useStaticIp) {
+                        wifiForm.append('ip', config.wifi.ip || '');
+                        wifiForm.append('gateway', config.wifi.gateway || '');
+                        wifiForm.append('subnet', config.wifi.subnet || '');
+                        wifiForm.append('dns1', config.wifi.dns1 || '');
+                        wifiForm.append('dns2', config.wifi.dns2 || '');
+                    }
+                    await fetch('/api/wifi', { method: 'POST', body: wifiForm });
+                }
+                alert('Restore complete! Please go to the new IP address. Device will reboot now.');
+                // Reboot the device after restore completes
+                await fetch('/api/reboot', { method: 'POST' });
+            } catch (e) {
+                alert('Failed to restore config: ' + e);
+            } finally {
+                overlay.style.display = 'none';
+            }
+        }
     </script>
 </body>
 
