@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Device Specs</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#33afff">
+    <link rel="icon" type="image/x-icon" href="/favicon.jpg">
+    <style>
+        body {
+            background: #121212;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px 20px 40px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .page-header {
+            background: #1e1e1e;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            margin-bottom: 1rem;
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .page-title {
+            color: #2196F3;
+            font-size: 2rem;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            flex: 1;
+            text-align: center;
+        }
+
+        .back-btn {
+            background: #252525;
+            color: #2196F3;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+            margin-right: 10px;
+        }
+
+        .back-btn:hover {
+            background: #2196F3;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .specs-container {
+            background: #1e1e1e;
+            padding: 2rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+            margin-bottom: 2rem;
+        }
+
+        .specs-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .spec-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #23272b;
+            border-radius: 8px;
+            padding: 14px 18px;
+            font-size: 1.08rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .spec-label {
+            color: #90caf9;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .spec-value {
+            color: #fff;
+            font-weight: 600;
+            font-family: 'Consolas', 'Menlo', monospace;
+        }
+
+        .connection-status {
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            position: absolute;
+            right: 18px;
+        }
+
+        .connection-status.online {
+            background: #1b5e20;
+            color: #4CAF50;
+        }
+
+        .connection-status.offline {
+            background: #b71c1c;
+            color: #ff5252;
+        }
+
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .connection-status.online .connection-dot {
+            background: #4CAF50;
+            box-shadow: 0 0 8px #4CAF50;
+        }
+
+        .connection-status.offline .connection-dot {
+            background: #ff5252;
+            box-shadow: 0 0 8px #ff5252;
+        }
+
+        .center-row {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        .version-footer {
+            margin-top: auto;
+            width: 100%;
+            font-size: 0.7rem;
+            color: #666;
+            text-align: center;
+            background: #121212;
+            padding: 8px 0;
+            border-top: 1px solid #252525;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .copyright {
+            font-size: 0.65rem;
+            color: #555;
+        }
+
+        .updating-indicator {
+            text-align: right;
+            color: #90caf9;
+            font-size: 0.95em;
+            margin-bottom: 6px;
+            font-style: italic;
+            min-height: 1.2em;
+        }
+
+        .updating-indicator .dot {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            margin-left: 3px;
+            border-radius: 50%;
+            background: #90caf9;
+            opacity: 0.7;
+            animation: blink 1.2s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 0.7;
+            }
+
+            50% {
+                opacity: 0.2;
+            }
+        }
+
+        @media (max-width: 700px) {
+
+            .specs-container,
+            .page-header {
+                max-width: 98vw;
+                padding: 1rem;
+            }
+
+            .spec-item {
+                font-size: 1rem;
+                padding: 10px 8px;
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: stretch;
+                height: auto;
+                position: static;
+            }
+
+            .connection-status {
+                position: static !important;
+                margin-top: 8px;
+                align-self: flex-end;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page-header" style="position:relative;">
+        <span class="page-title">Hardware Details</span>
+        <div id="connectionStatus" class="connection-status offline">
+            <span class="connection-dot"></span>
+            <span>Offline</span>
+        </div>
+    </div>
+    <div class="center-row">
+        <button class="back-btn" onclick="window.location.href='settings.html'">Back</button>
+    </div>
+    <div class="specs-container">
+        <div id="updateStatus" class="updating-indicator">Updating every 5 sec <span class="dot"></span></div>
+        <ul class="specs-list" id="specsList">
+            <li class="spec-item"><span class="spec-label">Loading...</span></li>
+        </ul>
+    </div>
+    <footer class="version-footer">
+        <span id="versionInfo">Checking version...</span>
+        <span class="copyright">&copy; 2025 desiFish. All rights reserved.</span>
+    </footer>
+    <script>
+        let isOnline = false;
+        function setUpdateStatus() {
+            const el = document.getElementById('updateStatus');
+            if (isOnline) {
+                el.innerHTML = 'Updating every 5 sec <span class="dot"></span>';
+                el.style.color = '#90caf9';
+            } else {
+                el.innerHTML = 'Update paused';
+                el.style.color = '#ff9800';
+            }
+        }
+        function checkConnection() {
+            fetch('/api/status')
+                .then(response => response.text())
+                .then(status => {
+                    const conn = document.getElementById('connectionStatus');
+                    if (status === 'true') {
+                        conn.className = 'connection-status online';
+                        conn.querySelector('span:last-child').textContent = 'Online';
+                        isOnline = true;
+                    } else {
+                        conn.className = 'connection-status offline';
+                        conn.querySelector('span:last-child').textContent = 'Offline';
+                        isOnline = false;
+                    }
+                    setUpdateStatus();
+                })
+                .catch(() => {
+                    const conn = document.getElementById('connectionStatus');
+                    conn.className = 'connection-status offline';
+                    conn.querySelector('span:last-child').textContent = 'Offline';
+                    isOnline = false;
+                    setUpdateStatus();
+                });
+        }
+        setInterval(checkConnection, 5000);
+        checkConnection();
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            let kb = bytes / 1024;
+            if (kb < 1024) return kb.toFixed(1) + ' KB';
+            let mb = kb / 1024;
+            return mb.toFixed(2) + ' MB';
+        }
+
+        function formatSpeed(hz) {
+            if (hz >= 1e6) return (hz / 1e6).toFixed(2) + ' MHz';
+            if (hz >= 1e3) return (hz / 1e3).toFixed(1) + ' kHz';
+            return hz + ' Hz';
+        }
+
+        function getWifiSignalLevel(rssi) {
+            if (rssi >= -55) return { level: 'Best', color: '#4CAF50' };
+            if (rssi >= -65) return { level: 'Good', color: '#8BC34A' };
+            if (rssi >= -75) return { level: 'Fair', color: '#FFC107' };
+            if (rssi >= -85) return { level: 'Poor', color: '#FF9800' };
+            return { level: 'Very Poor', color: '#F44336' };
+        }
+
+        function updateSpecs() {
+            fetch('/api/system/details')
+                .then(r => r.json())
+                .then(data => {
+                    const specs = [
+                        { label: 'Chip ID', value: data.chipId },
+                        { label: 'Flash Chip ID', value: data.flashChipId },
+                        { label: 'Flash Chip Size', value: formatBytes(data.flashChipSize) },
+                        { label: 'Flash Chip Speed', value: formatSpeed(data.flashChipSpeed) },
+                        { label: 'Free Heap', value: formatBytes(data.freeHeap) },
+                        { label: 'CPU Frequency', value: data.cpuFreqMHz + ' MHz' },
+                        { label: 'SDK Version', value: data.sdkVersion },
+                        { label: 'Core Version', value: data.coreVersion },
+                        { label: 'MAC Address', value: data.macAddress },
+                    ];
+                    // WiFi RSSI with signal level
+                    const wifi = getWifiSignalLevel(data.wifiRssi);
+                    specs.push({
+                        label: 'WiFi Signal',
+                        value: `<span style="color:${wifi.color};font-weight:bold;">${wifi.level}</span> <span style='color:#888;font-size:0.95em;'>(${data.wifiRssi} dBm)</span>`
+                    });
+                    const list = document.getElementById('specsList');
+                    list.innerHTML = '';
+                    specs.forEach(spec => {
+                        const li = document.createElement('li');
+                        li.className = 'spec-item';
+                        li.innerHTML = `<span class="spec-label">${spec.label}</span><span class="spec-value">${spec.value}</span>`;
+                        list.appendChild(li);
+                    });
+                })
+                .catch(() => {
+                    const list = document.getElementById('specsList');
+                    list.innerHTML = '<li class="spec-item"><span class="spec-label">Failed to load hardware details.</span></li>';
+                });
+        }
+        updateSpecs();
+        setInterval(updateSpecs, 5000);
+
+        // Fetch version info for footer
+        fetch('/api/version')
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.text();
+            })
+            .then(version => {
+                document.getElementById('versionInfo').textContent = version;
+            })
+            .catch(error => {
+                document.getElementById('versionInfo').textContent = 'error';
+            });
+    </script>
+</body>
+
+</html>

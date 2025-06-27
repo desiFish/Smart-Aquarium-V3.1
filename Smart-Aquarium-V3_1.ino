@@ -30,7 +30,7 @@
 #include "RTClib.h"
 
 // Software version
-#define SWVersion "v1.1.0"
+#define SWVersion "v1.1.1"
 
 RTC_DS3231 rtc;
 WiFiUDP ntpUDP;
@@ -1345,4 +1345,21 @@ void setupRelayEndpoints(byte relayIndex)
                   String response;
                   serializeJson(doc, response);
                   request->send(200, "application/json", response); });
+    // System details endpoint
+    server.on("/api/system/details", HTTP_GET, [](AsyncWebServerRequest *request)
+              { Serial.printf("[API] /api/system/details GET called\n");
+        JsonDocument doc;
+        doc["chipId"] = ESP.getChipId();
+        doc["flashChipId"] = ESP.getFlashChipId();
+        doc["flashChipSize"] = ESP.getFlashChipSize();
+        doc["flashChipSpeed"] = ESP.getFlashChipSpeed();
+        doc["freeHeap"] = ESP.getFreeHeap();
+        doc["cpuFreqMHz"] = ESP.getCpuFreqMHz();
+        doc["sdkVersion"] = ESP.getSdkVersion();
+        doc["coreVersion"] = ESP.getCoreVersion();
+        doc["macAddress"] = WiFi.macAddress();
+        doc["wifiRssi"] = WiFi.RSSI();
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response); });
 }
