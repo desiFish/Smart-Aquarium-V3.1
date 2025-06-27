@@ -189,7 +189,7 @@ All libraries can be installed through the Arduino Library Manager. These specif
 
 3. Install required libraries through Arduino Library Manager
 
-5. Initial Setup (Wired Upload - One time only):
+4. Initial Setup (Wired Upload - One time only):
    - Connect ESP8266 to your computer via USB
    - Install "ESP8266 LittleFS Data Upload" tool in Arduino IDE ([Installation Guide](https://randomnerdtutorials.com/arduino-ide-2-install-esp8266-littlefs/))
    - Ensure the `data` folder contains `index.html`, `settings.html`, and `favicon.jpg` with exact folder structure
@@ -203,8 +203,14 @@ All libraries can be installed through the Arduino Library Manager. These specif
    - If you are not sure what to use for static IP, simply fill in your WiFi SSID and password, do NOT check the "Use Static IP" slider, and click on "Save WiFi." When the device reboots, find the new IP assigned to it from your router's device list or any router app. Open that IP in your browser; the Smart Aquarium V3.1 page will open. Go to Settings again and click on "Make this static IP." The device will set the current router-assigned IP settings as static and reboot. Now you can keep using the same IP without worries.
    - If you want the device to always have the same IP address (for example, for port forwarding or remote access), you can configure a **Static IP** in the Settings page. Enter the desired IP address, gateway, subnet mask, and DNS information. Make sure the static IP is not already in use on your network to avoid conflicts.
    - If you are unsure, use Dynamic IP (leave static IP fields blank or disabled in the Settings page).
+
+   **RTC Synchronization and Browser Notification:**
+   - The browser will notify you if the RTC (Real Time Clock) is not synchronized by comparing the RTC time with your current device (PC/Smartphone) time.
+   - On the Settings page, the RTC time is displayed just under the main buttons. If the RTC is not connected or there is an error, it will show `RTC_ERROR` instead of the time. This is a reliable place to check RTC status.
+   - If you notice the RTC time is incorrect, scroll to the bottom of the Settings page and select the nearest NTP pool server to you (if unsure, use `pool.ntp.org`) and set your timezone. Save the settings, it will automatically update RTC from the NTP server.
+   - The browser updates the RTC time shown on the Settings page every 30 seconds, so the displayed time will always be within ±1 second of the actual RTC time.
    
-6. Filesystem and Future Updates (Wireless/OTA):
+5. Filesystem and Future Updates (Wireless/OTA):
    - Press `Ctrl + Shift + P` in Arduino IDE (or follow the [guide](https://randomnerdtutorials.com/arduino-ide-2-install-esp8266-littlefs/)) to launch ESP8266 LittleFS Data Upload tool
    - **Note:** The LittleFS uploader tool requires a COM port to be selected, even if the ESP8266 is not connected. You must select a port such as `COM3 [Not Connected]` in the Arduino IDE. If no COM port is available, the upload will fail.
    - When it fails (as ESP8266 is not connected via USB), check the error message
