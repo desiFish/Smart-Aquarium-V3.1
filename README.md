@@ -50,6 +50,9 @@ By using this project, you acknowledge and agree to the following:
 <img src="src/settings.png" alt="Settings Interface" width="600"/>
 <p><em>Settings Page - Desktop View: Configuration interface for relay names and system settings</em></p>
 
+<img src="src/specs.png" alt="Hardware Info Desktop" width="600"/>
+<p><em>Hardware Info Page - Desktop View: Real-time ESP8266 system and WiFi details</em></p>
+
 <div style="display: flex; justify-content: center; gap: 20px;">
   <div>
     <img src="src/index-phone.png" alt="Mobile Dashboard" width="250"/>
@@ -58,6 +61,10 @@ By using this project, you acknowledge and agree to the following:
   <div>
     <img src="src/settings-phone.png" alt="Mobile Settings" width="250"/>
     <p><em>Settings Page - Mobile View</em></p>
+  </div>
+  <div>
+    <img src="src/specs-phone.png" alt="Hardware Info Mobile" width="250"/>
+    <p><em>Hardware Info Page - Mobile View</em></p>
   </div>
 </div>
 </div>
@@ -272,6 +279,11 @@ The system provides a modern, fully responsive web interface optimized for both 
   - Easy Touch Navigation
   - Responsive Time Controls
   - Accessible System Information
+
+- **Hardware Info Page** (`specs.html`)
+  - Real-time ESP8266 system and WiFi details
+  - Intuitive color-coded WiFi signal strength indicator
+  - Fully responsive and mobile-friendly layout
 
 ## 🔌 API Endpoints
 
