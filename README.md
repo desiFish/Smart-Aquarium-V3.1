@@ -113,6 +113,7 @@ This system is highly scalable and can be easily modified to control more or few
      - 2KB of program memory
      - 100 bytes of RAM for state management
      - Minimal impact on web interface size
+   - **Professional Note:** Based on my experience, it is advisable not to exceed 5-6 relays in practical deployments. This is due to the significant number of API calls occurring in the background, which may impact system reliability. As the system has not been stress tested with higher relay counts, I cannot guarantee stable operation beyond this range.
 
 > 💡 **Scaling Tip**: When modifying the number of relays, ensure you update all three components:
 > 1. Hardware GPIO definitions
@@ -124,7 +125,8 @@ This system is highly scalable and can be easily modified to control more or few
 - ESP8266 12-E NodeMCU Development Board (or any compatible ESP8266 module)
 - DS3231 RTC Module
 - 4-Channel Relay Module
-- Power Supply (5V)
+- Power Supply (5V)  
+  - *Ensure the power supply is well-filtered and of good quality to avoid instability or malfunction. A more robust power supply circuit is currently under development and will be made available in the future.*
 - WiFi Connection
 
 > 💡 **Compatibility**: While this project is developed and tested on the ESP8266 12-E NodeMCU Kit, it should work on other ESP8266-based development boards with minimal modifications. Just ensure your board has enough GPIO pins for the relay and RTC connections.
@@ -142,41 +144,35 @@ The above schematic shows the connections between the ESP8266, RTC module, and r
 
 ## 🕒 NTP Time Offset and Server Selection
 
-The code uses the following line to initialize the NTP client:
+Previously, the NTP time offset and server were set manually in the code using a line such as:
 ```cpp
 NTPClient timeClient(ntpUDP, "in.pool.ntp.org", 19800);
 ```
-- The third parameter, `19800`, is the time offset in **seconds** for your timezone.
-- `19800` seconds = **5 hours 30 minutes** (5 × 3600 + 30 × 60), which is the offset for **Indian Standard Time (IST, UTC+5:30)**.
-- If you are in a different timezone, calculate your offset in seconds and update this value accordingly.
+- The third parameter, `19800`, is the time offset in **seconds** for your timezone (e.g., 19800 seconds = 5 hours 30 minutes for IST).
 
-**How to calculate your offset:**
-- Offset (in seconds) = (Hours × 3600) + (Minutes × 60)
-- Example for UTC+2: (2 × 3600) = `7200`
+**Now, the NTP server and timezone can be configured directly from the Settings page of the web interface.**
+- Simply provide your preferred NTP server and select your timezone in the settings.
+- The program will automatically calculate the correct time offset based on your selection, eliminating the need for manual calculation or code changes.
 
-**Default NTP Server:**
-- The default NTP server is set to `"in.pool.ntp.org"` (India).
-- For best accuracy, select the NTP pool server nearest to your location from [https://www.ntppool.org/en/zone/in](https://www.ntppool.org/en/zone/in) or [https://www.ntppool.org/](https://www.ntppool.org/).
+**How it works:**
+- The system uses your selected timezone to determine the offset in seconds.
+- The NTP server address is updated as per your input in the settings.
 
-**To change:**
-- Replace `"in.pool.ntp.org"` with your region's NTP pool server (e.g., `"europe.pool.ntp.org"`, `"us.pool.ntp.org"`, etc.).
-- Adjust the offset to match your local timezone.
+**Example:**
+- If you select Central European Time (CET, UTC+1) in the settings, the program will automatically use an offset of 3600 seconds and update the NTP server accordingly.
 
-Example for Central European Time (CET, UTC+1):
-```cpp
-NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 3600);
-```
+This makes the system more flexible and user-friendly, allowing for easy adjustments without modifying the code.
 
 ## 📦 Dependencies
 
 > ⚠️ **Important**: The following specific libraries are required for compatibility. Using different versions may cause stability issues.
 
 - ESP8266WiFi (Built-in with ESP8266 Arduino Core)
-- [ESPAsyncTCP](https://github.com/ESP32Async/ESPAsyncTCP) - **Required Version**
-- [ESPAsyncWebServer](https://github.com/ESP32Async/ESPAsyncWebServer) - **Required Version**
+- [ESPAsyncTCP](https://github.com/ESP32Async/ESPAsyncTCP) - **Required Latest Version**
+- [ESPAsyncWebServer](https://github.com/ESP32Async/ESPAsyncWebServer) - **Required Latest Version**
 - LittleFS (Built-in with ESP8266 Arduino Core)
 - ArduinoJson
-- [RTClib](https://github.com/adafruit/RTClib) - **Required Version**
+- [RTClib](https://github.com/adafruit/RTClib) - **Required Latest Version**
 - ElegantOTA
 - NTPClient
 
@@ -193,19 +189,20 @@ All libraries can be installed through the Arduino Library Manager. These specif
 
 3. Install required libraries through Arduino Library Manager
 
-4. Configure WiFi credentials in Smart-Aquarium-V3.1.ino:
-   ```cpp
-   const char *ssid = "YourWiFiName";
-   const char *password = "YourWiFiPassword";
-   ```
-
 5. Initial Setup (Wired Upload - One time only):
    - Connect ESP8266 to your computer via USB
    - Install "ESP8266 LittleFS Data Upload" tool in Arduino IDE ([Installation Guide](https://randomnerdtutorials.com/arduino-ide-2-install-esp8266-littlefs/))
    - Ensure the `data` folder contains `index.html`, `settings.html`, and `favicon.jpg` with exact folder structure
    - Upload HTML files using the guide above
    - Upload the code from Arduino IDE
-   - After successful code upload, the device will connect to your configured network
+   - After successful code upload, the device will create a WiFi access point (hotspot) named `Aquarium-Setup` with password `12345678`. Connect to this network using any device (preferably a PC). Ignore any alert about "connected with no internet." Open a browser and go to `192.168.4.1`. Navigate to the Settings page, enter your WiFi credentials, and click on "Save WiFi." The device will then reboot and attempt to connect to your configured network.
+
+   **Dynamic vs Static IP:**
+   - By default, the device uses **Dynamic IP (DHCP)**. This means your WiFi router will automatically assign an available IP address to the device. This is recommended for most users and ensures easy connectivity.
+   - However, with Dynamic IP, the assigned address may change every time the device or router restarts. This can be inconvenient, as you may need to keep searching for the new IP address to access the device.
+   - If you are not sure what to use for static IP, simply fill in your WiFi SSID and password, do NOT check the "Use Static IP" slider, and click on "Save WiFi." When the device reboots, find the new IP assigned to it from your router's device list or any router app. Open that IP in your browser; the Smart Aquarium V3.1 page will open. Go to Settings again and click on "Make this static IP." The device will set the current router-assigned IP settings as static and reboot. Now you can keep using the same IP without worries.
+   - If you want the device to always have the same IP address (for example, for port forwarding or remote access), you can configure a **Static IP** in the Settings page. Enter the desired IP address, gateway, subnet mask, and DNS information. Make sure the static IP is not already in use on your network to avoid conflicts.
+   - If you are unsure, use Dynamic IP (leave static IP fields blank or disabled in the Settings page).
    
 6. Filesystem and Future Updates (Wireless/OTA):
    - Press `Ctrl + Shift + P` in Arduino IDE (or follow the [guide](https://randomnerdtutorials.com/arduino-ide-2-install-esp8266-littlefs/)) to launch ESP8266 LittleFS Data Upload tool
@@ -214,20 +211,32 @@ All libraries can be installed through the Arduino Library Manager. These specif
    - Locate the generated binary file path from the error message (usually in the temporary build folder)
    ![LittleFS Binary Location](src/littleFS.jpg)     
    - Access the ElegantOTA interface at `http://[ESP-IP]/update`
-   - For filesystem updates: Select "Filesystem" mode and upload the LittleFS binary (.bin)
+   - For filesystem updates: Select "LittleFS/SPIFFS" mode and upload the LittleFS binary (.bin)
    - For code updates: Select "Firmware" mode and upload the generated .bin file after compiling the sketch in Arduino IDE
 
-> ⚠️ **Configuration Persistence**: When updating the filesystem through OTA, all configuration data stored in LittleFS will be erased. You'll need to:
+> ⚠️ **Configuration Persistence**: When updating the filesystem through OTA, all configuration data stored in LittleFS will be erased. This includes NTP settings, WiFi details (including static IP configuration), relay names, schedules, and any other custom settings. You'll need to:
 > - Rename relays
 > - Reset schedules and timers
-> - Reconfigure any custom settings
+> - Reconfigure NTP, WiFi, and static IP settings
+> - Reconfigure any other custom settings
 > This only applies to filesystem updates, not firmware updates.
+
+## 🗄️ Backup and Restore
+
+The system provides a simple backup and restore feature for your convenience:
+
+- **Backup:** Click the Backup button on the Settings page to save all current configuration data (including WiFi, NTP, static IP, relay names, schedules, and more) to your PC or smartphone as a single file. This is highly recommended before performing any software or hardware updates.
+
+- **Restore:** To restore, simply select your backup file using the Restore option on the Settings page. The system will restore everything—literally all your previous settings and configuration will be reinstated automatically.
+
+This makes it easy to recover your setup after updates or hardware changes, ensuring a seamless experience.
+
 
 > 📚 **Reference Guides**:
 > - [ElegantOTA Basic Usage Guide](https://randomnerdtutorials.com/esp32-ota-elegantota-arduino/)
 > - [ElegantOTA Async Configuration](https://docs.elegantota.pro/getting-started/async-mode)
 
-> 💡 **Tip**: After the initial wired upload, all future updates can be done wirelessly through ElegantOTA. This includes both code and filesystem updates.
+> 💡 **Tip**: After the initial wired upload, all future updates can be done wirelessly through ElegantOTA. This includes both code and filesystem updates. Just make sure to have backup.
 
 ## ⚠️ Important Troubleshooting
 
@@ -262,18 +271,27 @@ The system provides a modern, fully responsive web interface optimized for both 
 
 The system exposes several RESTful API endpoints:
 
-- `/api/status` - System status
+- `/api/status` - System status (returns true if running)
 - `/api/version` - Firmware version
-- `/api/rtctime` - Current RTC time
-- `/api/ledX/*` - Relay control endpoints where X is 1-4
-  - `/status` - Get relay status
-  - `/toggle` - Toggle relay state
-  - `/mode` - Set/get operation mode
-  - `/schedule` - Set/get schedules
-  - `/timer` - Set timer duration
-  - `/timer/state` - Get timer status
-  - `/toggle-mode` - Set toggle mode parameters
-  - `/name` - Set/get relay name
+- `/api/rtctime` - Current RTC time (HH:MM)
+- `/api/clock` - Returns time, date, and day of week
+- `/api/wifi` (GET/POST) - Get or update WiFi and network settings
+- `/api/ntp` (GET/POST) - Get or update NTP server and timezone settings
+- `/api/reboot` (POST) - Reboot the device
+- `/api/time/update` (POST) - Trigger RTC time update from NTP
+- `/api/ledX/*` - Relay control endpoints where X is 1-4:
+  - `/status` (GET) - Get relay status (ON/OFF)
+  - `/toggle` (POST) - Toggle relay state
+  - `/mode` (GET/POST) - Get or set operation mode (manual, auto, timer, toggle)
+  - `/schedule` (GET/POST) - Get or set relay schedule (on/off times)
+  - `/timer` (POST) - Set timer duration
+  - `/timer/state` (GET) - Get timer status
+  - `/toggle-mode` (POST) - Set toggle mode parameters
+  - `/toggle-mode/state` (GET) - Get toggle mode status
+  - `/name` (GET/POST) - Get or set relay name
+  - `/system/state` (GET/POST) - Get or set relay enabled/disabled state
+
+These endpoints allow full configuration and control of the system via the web interface or external tools.
 
 ## 🎯 Contributing
 
