@@ -216,7 +216,7 @@ All libraries can be installed through the Arduino Library Manager. These specif
    - On the Settings page, the RTC time is displayed just under the main buttons. If the RTC is not connected or there is an error, it will show `RTC_ERROR` instead of the time. This is a reliable place to check RTC status.
    - If you notice the RTC time is incorrect, scroll to the bottom of the Settings page and select the nearest NTP pool server to you (if unsure, use `pool.ntp.org`) and set your timezone. Save the settings, it will automatically update RTC from the NTP server.
    - The browser updates the RTC time shown on the Settings page every 30 seconds, so the displayed time will always be within ±1 second of the actual RTC time.
-   
+
 5. Filesystem and Future Updates (Wireless/OTA):
    - Press `Ctrl + Shift + P` in Arduino IDE (or follow the [guide](https://randomnerdtutorials.com/arduino-ide-2-install-esp8266-littlefs/)) to launch ESP8266 LittleFS Data Upload tool
    - **Note:** The LittleFS uploader tool requires a COM port to be selected, even if the ESP8266 is not connected. You must select a port such as `COM3 [Not Connected]` in the Arduino IDE. If no COM port is available, the upload will fail.
@@ -226,6 +226,24 @@ All libraries can be installed through the Arduino Library Manager. These specif
    - Access the ElegantOTA interface at `http://[ESP-IP]/update`
    - For filesystem updates: Select "LittleFS/SPIFFS" mode and upload the LittleFS binary (.bin)
    - For code updates: Select "Firmware" mode and upload the generated .bin file after compiling the sketch in Arduino IDE
+
+> 📚 **Reference Guides**:
+> - [ElegantOTA Basic Usage Guide](https://randomnerdtutorials.com/esp32-ota-elegantota-arduino/)
+> - [ElegantOTA Async Configuration](https://docs.elegantota.pro/getting-started/async-mode)
+
+### ⚡ Optional: Direct Binary Uploads from Releases
+
+Pre-built binary files are provided for convenience in the [Releases section](https://github.com/desiFish/Smart-Aquarium-V3.1/releases):
+
+- `filesystem.littlefs.bin` — LittleFS filesystem image for direct upload
+- `firmware-esp8266.esp8266.nodemcuv2.bin` — Compiled firmware for NodeMCU v2
+
+You can upload these files directly using the ElegantOTA web interface:
+- Go to `http://[ESP-IP]/update`
+- Select the appropriate mode ("LittleFS/SPIFFS" for filesystem, "Firmware" for code)
+- Upload the corresponding `.bin` file from the release assets
+
+> This is the fastest way to update your device without compiling or using the Arduino IDE.
 
 > ⚠️ **Configuration Persistence**: When updating the filesystem through OTA, all configuration data stored in LittleFS will be erased. This includes NTP settings, WiFi details (including static IP configuration), relay names, schedules, and any other custom settings. You'll need to:
 > - Rename relays
@@ -244,10 +262,7 @@ The system provides a simple backup and restore feature for your convenience:
 
 This makes it easy to recover your setup after updates or hardware changes, ensuring a seamless experience.
 
-
-> 📚 **Reference Guides**:
-> - [ElegantOTA Basic Usage Guide](https://randomnerdtutorials.com/esp32-ota-elegantota-arduino/)
-> - [ElegantOTA Async Configuration](https://docs.elegantota.pro/getting-started/async-mode)
+> ⚠️ **Note:** In rare cases, the restore process may fail due to browser or network issues. If this happens, simply reload the page and try the restore again.
 
 > 💡 **Tip**: After the initial wired upload, all future updates can be done wirelessly through ElegantOTA. This includes both code and filesystem updates. Just make sure to have backup.
 
@@ -257,11 +272,15 @@ This makes it easy to recover your setup after updates or hardware changes, ensu
 > 1. **Remove Static IP**: Comment out or remove the static IP configuration code to use DHCP (recommended for beginners)
 > 2. **Configure Static IP**: Ensure your static IP settings match your network configuration:
 >    ```cpp
->    IPAddress local_IP(192, 168, 1, 200);     // Choose an unused IP in your network
->    IPAddress gateway(192, 168, 1, 1);        // Your router's IP address
->    IPAddress subnet(255, 255, 255, 0);       // Your network's subnet mask
+>    local_IP(192, 168, 1, 200);     // Choose an unused IP in your network
+>    gateway(192, 168, 1, 1);        // Your router's IP address
+>    subnet(255, 255, 255, 0);       // Your network's subnet mask
 >    ```
 > Most connection issues are resolved by either switching to DHCP or correctly configuring these values!
+
+> 💡 **Don't worry, I've got you covered!** Even if you don't know how to set a static IP, just enter your WiFi name (SSID) and password, and hit "Save WiFi." Upon restart, your router will automatically assign the device a new IP address. To find out what IP address was assigned, check your router's device list. If your router identifies devices by MAC address, simply go to the Hardware Info page in the web interface to find your device's MAC address.
+>
+> Now, after the device restarts and you log in with the new IP, you'll notice that the fields below WiFi name and password (subnet, gateway, etc.) are all filled in automatically. Just check the "Use custom static IP" option and click on "Make this static IP." The device will reboot, and from then on, you can always use this IP address to access your Smart Aquarium—no network knowledge required!
 
 ## 🌐 Web Interface
 
@@ -297,17 +316,18 @@ The system exposes several RESTful API endpoints:
 - `/api/ntp` (GET/POST) - Get or update NTP server and timezone settings
 - `/api/reboot` (POST) - Reboot the device
 - `/api/time/update` (POST) - Trigger RTC time update from NTP
-- `/api/ledX/*` - Relay control endpoints where X is 1-4:
-  - `/status` (GET) - Get relay status (ON/OFF)
-  - `/toggle` (POST) - Toggle relay state
-  - `/mode` (GET/POST) - Get or set operation mode (manual, auto, timer, toggle)
-  - `/schedule` (GET/POST) - Get or set relay schedule (on/off times)
-  - `/timer` (POST) - Set timer duration
-  - `/timer/state` (GET) - Get timer status
-  - `/toggle-mode` (POST) - Set toggle mode parameters
-  - `/toggle-mode/state` (GET) - Get toggle mode status
-  - `/name` (GET/POST) - Get or set relay name
-  - `/system/state` (GET/POST) - Get or set relay enabled/disabled state
+- `/api/error` (GET) - Get the latest error message (clears after reading)
+- `/api/system/details` (GET) - Get ESP8266 system and hardware details
+- `/api/ledX/status` (GET) - Get relay status (ON/OFF)
+- `/api/ledX/toggle` (POST) - Toggle relay state
+- `/api/ledX/mode` (GET/POST) - Get or set operation mode (manual, auto, timer, toggle)
+- `/api/ledX/schedule` (GET/POST) - Get or set relay schedule (on/off times)
+- `/api/ledX/timer` (POST) - Set timer duration
+- `/api/ledX/timer/state` (GET) - Get timer status
+- `/api/ledX/toggle-mode` (POST) - Set toggle mode parameters
+- `/api/ledX/toggle-mode/state` (GET) - Get toggle mode status
+- `/api/ledX/name` (GET/POST) - Get or set relay name
+- `/api/ledX/system/state` (GET/POST) - Get or set relay enabled/disabled state
 
 These endpoints allow full configuration and control of the system via the web interface or external tools.
 
