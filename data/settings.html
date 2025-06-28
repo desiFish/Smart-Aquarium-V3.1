@@ -874,6 +874,14 @@
             document.getElementById('useStaticIpInput').checked = true;
             // Submit the WiFi form (will use the current values in the fields)
             document.getElementById('wifiForm').requestSubmit();
+            // Wait 2 seconds, then call /api/reboot to trigger device reboot
+            setTimeout(async () => {
+                await fetch('/api/reboot', { method: 'POST' });
+                // Optionally reload the page after another 2 seconds
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            }, 2000);
         }
 
         // On page load, fetch and set current NTP/Timezone values
