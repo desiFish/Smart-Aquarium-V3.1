@@ -213,6 +213,7 @@
             cursor: pointer;
             margin-top: 10px;
             transition: background 0.3s;
+            position: relative;
         }
 
         .btn-set:hover {
@@ -312,6 +313,20 @@
             letter-spacing: 1px;
             text-align: center;
         }
+
+        .tooltip {
+            display: none;
+            position: absolute;
+            background: #222;
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.95em;
+            z-index: 10;
+            margin-top: 24px;
+            box-shadow: 0 2px 8px #00000040;
+            white-space: nowrap;
+        }
     </style>
 </head>
 
@@ -381,10 +396,31 @@
                     <input type="text" id="dns2Input" name="dns2" class="name-input" style="flex:1;"
                         placeholder="Secondary DNS (e.g. 1.0.0.1)" value="1.0.0.1">
                 </div>
-                <button type="button" class="btn-set" style="margin-top:10px;" onclick="setCurrentAsStaticIp()">Make
-                    this static IP</button>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+                    <button type="button" class="btn-set" onclick="setCurrentAsStaticIp()">Make this static IP</button>
+                    <span style="display:inline-flex;align-items:center;gap:4px;position:relative;cursor:pointer;"
+                        onmouseenter="this.querySelector('.tooltip').style.display='block'"
+                        onmouseleave="this.querySelector('.tooltip').style.display='none'">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 0 24 24" width="16"
+                            style="fill:#ff5252;vertical-align:middle;">
+                            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+                        </svg>
+                        <span class="tooltip">Reboot required</span>
+                    </span>
+                </div>
             </div>
-            <button class="btn-set" style="margin-top:10px;" type="submit">Save WiFi</button>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+                <button class="btn-set" type="submit">Save WiFi</button>
+                <span style="display:inline-flex;align-items:center;gap:4px;position:relative;cursor:pointer;"
+                    onmouseenter="this.querySelector('.tooltip').style.display='block'"
+                    onmouseleave="this.querySelector('.tooltip').style.display='none'">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 0 24 24" width="16"
+                        style="fill:#ff5252;vertical-align:middle;">
+                        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+                    </svg>
+                    <span class="tooltip">Reboot required</span>
+                </span>
+            </div>
         </form>
         <div id="wifiSaveStatus" style="margin-top:8px;font-size:0.9em;"></div>
         <div id="wifiRebootMsg" style="margin-top:8px;font-size:1em;color:#4CAF50;display:none;"></div>
@@ -421,7 +457,18 @@
         <input type="text" id="ntpServerInput" class="name-input" placeholder="e.g. in.pool.ntp.org">
         <label for="timezoneInput" style="margin-top:10px;">Timezone (e.g. +5:30, -4:00):</label>
         <input type="text" id="timezoneInput" class="name-input" placeholder="+5:30">
-        <button class="btn-set" style="margin-top:10px;" onclick="saveNtpSettings()">Save NTP/Timezone</button>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+            <button class="btn-set" onclick="saveNtpSettings()">Save NTP/Timezone</button>
+            <span style="display:inline-flex;align-items:center;gap:4px;position:relative;cursor:pointer;"
+                onmouseenter="this.querySelector('.tooltip').style.display='block'"
+                onmouseleave="this.querySelector('.tooltip').style.display='none'">
+                <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 0 24 24" width="16"
+                    style="fill:#ff5252;vertical-align:middle;">
+                    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+                </svg>
+                <span class="tooltip">Reboot required</span>
+            </span>
+        </div>
         <div id="ntpSaveStatus" style="margin-top:8px;font-size:0.9em;"></div>
     </div>
 
@@ -681,7 +728,6 @@
                 return;
             }
 
-            // Send to server (requires server endpoint implementation)
             try {
                 const resp = await fetch('/api/ntp', {
                     method: 'POST',
@@ -692,13 +738,36 @@
                         offset
                     })
                 });
+                let backendMsg = "";
                 if (resp.ok) {
-                    statusDiv.textContent = "NTP/Timezone updated successfully.";
+                    // Try to parse backend message if present
+                    try {
+                        const result = await resp.json();
+                        backendMsg = result && result.message ? result.message : "NTP/Timezone updated successfully.";
+                    } catch {
+                        backendMsg = "NTP/Timezone updated successfully.";
+                    }
+                    statusDiv.textContent = backendMsg;
                     statusDiv.style.color = "#4CAF50";
+                    // Alert user and trigger reboot after confirmation
+                    setTimeout(async () => {
+                        alert(backendMsg + "\n\nThe device will now reboot to apply changes. Please wait a few seconds before reconnecting. ");
+                        statusDiv.textContent += " Rebooting...";
+                        statusDiv.style.color = "#1976D2";
+                        await fetch('/api/reboot', { method: 'POST' });
+                        setTimeout(() => {
+                            location.reload();
+                        }, 2000);
+                    }, 1200);
                 } else {
-                    statusDiv.textContent = "Failed to update NTP/Timezone.";
+                    try {
+                        const result = await resp.json();
+                        backendMsg = result && result.error ? result.error : "Failed to update NTP/Timezone.";
+                    } catch {
+                        backendMsg = "Failed to update NTP/Timezone.";
+                    }
+                    statusDiv.textContent = backendMsg;
                     statusDiv.style.color = "#ff5252";
-                    console.error("NTP update failed: HTTP status", resp.status);
                 }
             } catch (e) {
                 statusDiv.textContent = "Error communicating with server.";
@@ -1109,6 +1178,30 @@
                 overlay.style.display = 'none';
             }
         }
+
+        // Error polling: check /api/error every 5 seconds and alert if a new error message is present
+        (function errorPoller() {
+            let lastErrorMsg = "";
+            async function pollError() {
+                try {
+                    const resp = await fetch('/api/error?_=' + Date.now());
+                    if (!resp.ok) return;
+                    const data = await resp.json();
+                    const msg = (data && data.error) ? String(data.error).trim() : "";
+                    if (msg && msg !== lastErrorMsg) {
+                        alert("Device Error:\n\n" + msg);
+                        lastErrorMsg = msg;
+                    } else if (!msg) {
+                        lastErrorMsg = "";
+                    }
+                } catch (e) {
+                    // Ignore fetch errors
+                } finally {
+                    setTimeout(pollError, 5000);
+                }
+            }
+            pollError();
+        })();
     </script>
 </body>
 

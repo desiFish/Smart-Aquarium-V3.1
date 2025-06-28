@@ -30,7 +30,7 @@
 #include "RTClib.h"
 
 // Software version
-#define SWVersion "v1.1.1"
+#define SWVersion "v1.1.2"
 
 RTC_DS3231 rtc;
 WiFiUDP ntpUDP;
@@ -134,13 +134,13 @@ void loadWifiConfigFromFS(String &ssidVal, String &passwordVal,
     Serial.println("[DEBUG] loadWifiConfigFromFS called");
     if (!LittleFS.exists("/wifi.json"))
     {
-        Serial.println("[DEBUG] /wifi.json not found, using defaults");
+        Serial.println("[DEBUG] /wifi.json not found");
         return;
     }
     File f = LittleFS.open("/wifi.json", "r");
     if (!f)
     {
-        Serial.println("[DEBUG] Failed to open /wifi.json, using defaults");
+        Serial.println("[DEBUG] Failed to open /wifi.json");
         return;
     }
     Serial.println("[DEBUG] /wifi.json opened successfully");
@@ -242,7 +242,7 @@ private:
             name = "Relay " + String(relayNum);
             mode = "manual";
             isOn = false;
-            isDisabled = false;
+            isDisabled = true; // Default to disabled
             onTime = 0;
             offTime = 0;
             // Toggle defaults
@@ -634,6 +634,34 @@ bool ensureConfigDirectory()
 
 volatile bool shouldReboot = false;
 
+// --- Error message buffer for API ---
+String errorBuffer = "";
+
+// Helper functions for RTC update flag (optimized: short binary file, 1 byte)
+void writeRtcUpdateFlag(bool flag)
+{
+    File f = LittleFS.open("/r", "w");
+    if (f)
+    {
+        uint8_t val = flag ? 0x01 : 0x00;
+        f.write(&val, 1);
+        f.close();
+    }
+}
+
+bool readRtcUpdateFlag()
+{
+    if (!LittleFS.exists("/r"))
+        return false;
+    File f = LittleFS.open("/r", "r");
+    if (!f)
+        return false;
+    uint8_t val = 0;
+    f.read(&val, 1);
+    f.close();
+    return val == 0x01;
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -641,13 +669,18 @@ void setup()
     if (!LittleFS.begin())
     {
         Serial.println("LittleFS Mount Failed");
+        errorBuffer = "Filesystem mount failed. Device cannot operate. Reboot or reflash required.";
         return;
     }
 
     // Ensure config directory exists
     if (!LittleFS.exists("/config"))
     {
-        LittleFS.mkdir("/config");
+        if (!LittleFS.mkdir("/config"))
+        {
+            Serial.println("Failed to create /config directory");
+            errorBuffer = "Failed to create /config directory. Filesystem error.";
+        }
     }
 
     // Load WiFi config from FS (before WiFi.begin)
@@ -681,12 +714,14 @@ void setup()
                 if (!WiFi.config(ip, gateway, subnet, dns1, dns2))
                 {
                     Serial.println("STA Failed to configure static IP");
+                    errorBuffer = "Failed to configure static IP. Check IP/gateway/subnet values.";
                     staticIpOk = false;
                 }
             }
             else
             {
                 Serial.println("Invalid static IP configuration");
+                errorBuffer = "Invalid static IP configuration. Check IP/gateway/subnet values.";
             }
         }
         if (!staticIpOk)
@@ -746,13 +781,13 @@ void setup()
             }
             if (WiFi.status() == WL_CONNECTED)
             {
-                Serial.println("\nSTA connected in AP+STA mode.");
+                Serial.println("\nSTA connected in AP mode.");
                 Serial.print("STA IP address: ");
                 Serial.println(WiFi.localIP());
             }
             else
             {
-                Serial.println("\nSTA not connected in AP+STA mode.");
+                Serial.println("\nSTA not connected in AP mode.");
             }
         }
     }
@@ -760,6 +795,7 @@ void setup()
     if (!rtc.begin())
     {
         Serial.println("Couldn't find RTC");
+        errorBuffer = "RTC not found. Please check hardware connection.";
     }
 
     // Initialize relay objects
@@ -777,6 +813,13 @@ void setup()
     setupServer();
     server.begin();
     Serial.println("HTTP server started");
+
+    // After all config loads, check RTC update flag
+    if (readRtcUpdateFlag())
+    {
+        rtcTimeUpdater();
+        writeRtcUpdateFlag(false);
+    }
 }
 
 void loop()
@@ -856,29 +899,52 @@ bool rtcTimeUpdater()
     if (!rtc.begin())
     {
         Serial.println("[DEBUG] RTC not found in rtcTimeUpdater");
-        return false;
+        errorBuffer = "RTC not found. Please check hardware connection.";
+        // return false;
     }
     if (WiFi.status() == WL_CONNECTED)
     {
-        timeClient.begin();
-        if (timeClient.update() && timeClient.isTimeSet())
+        if (ntpServer.length() == 0)
+        {
+            ntpServer = "pool.ntp.org";
+            Serial.println("[WARN] NTP server string was empty, set to default");
+        }
+        Serial.print("[DEBUG] NTP server: ");
+        Serial.println(ntpServer);
+
+        if (!timeClient.isTimeSet())
+        {
+            Serial.println("[DEBUG] NTP time not set, attempting update");
+        }
+        bool updated = false;
+
+        if (WiFi.status() == WL_CONNECTED && ntpServer.length() > 0)
+        {
+            updated = timeClient.update();
+        }
+        if (updated && timeClient.isTimeSet())
         {
             time_t rawtime = timeClient.getEpochTime();
-            struct tm *ti;
-            ti = localtime(&rawtime);
-
-            uint16_t year = ti->tm_year + 1900;
-            uint8_t month = ti->tm_mon + 1;
-            uint8_t day = ti->tm_mday;
-
-            rtc.adjust(DateTime(year, month, day,
-                                timeClient.getHours(),
-                                timeClient.getMinutes(),
-                                timeClient.getSeconds()));
-
-            Serial.println("RTC updated");
+            if (rawtime < 1000000000UL) // sanity check for valid epoch (after 2001)
+            {
+                Serial.println("[ERROR] Invalid epoch time from NTP");
+                errorBuffer = "Invalid epoch time from NTP. Time sync failed.";
+                return false;
+            }
+            DateTime dt(rawtime);
+            rtc.adjust(dt);
             return true;
         }
+        else
+        {
+            Serial.println("[ERROR] NTP update failed or time not set");
+            errorBuffer = "NTP update failed or time not set. Check internet connection and NTP server.";
+        }
+    }
+    else
+    {
+        Serial.println("[ERROR] WiFi not connected in rtcTimeUpdater");
+        errorBuffer = "WiFi not connected. Cannot update time from NTP.";
     }
     return false;
 }
@@ -984,6 +1050,7 @@ void setupServer()
               { Serial.println("[DEBUG] /api/rtctime endpoint called");
         if (!rtc.begin()) {
             request->send(200, "text/plain", "RTC_FAILED");
+            errorBuffer = "RTC not found. Please check hardware connection.";
             return;
         }
         DateTime now = rtc.now();
@@ -1008,13 +1075,9 @@ void setupServer()
                 timezoneString = newTimezone;
                 // Save to FS
                 saveNtpConfigToFS();
-                // Re-initialize NTPClient
-                timeClient.end();
-                timeClient = NTPClient(ntpUDP, ntpServer.c_str(), timezoneOffset);
-                // Immediately update RTC from new NTP config
-                rtcTimeUpdater();
-                Serial.println("8");
-                request->send(200, "application/json", "{\"success\":true}");
+                writeRtcUpdateFlag(true); // Set flag for RTC update after reboot
+                Serial.println("[DEBUG] NTP config updated, scheduling reboot");
+                request->send(200, "application/json", "{\"success\":true,\"info\":\"Rebooting to apply NTP config...\"}");
             } else {
                 request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid data\"}");
             } });
@@ -1035,6 +1098,17 @@ void setupServer()
     {
         setupRelayEndpoints(i);
     }
+
+    // Error API endpoint
+    server.on("/api/error", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
+                  Serial.println("[API] /api/error endpoint called");
+                  JsonDocument doc;
+                  doc["error"] = errorBuffer;
+                  String response;
+                  serializeJson(doc, response);
+                  request->send(200, "application/json", response);
+                  errorBuffer = ""; });
 
     // Time update endpoint
     server.on("/api/time/update", HTTP_POST, [](AsyncWebServerRequest *request)

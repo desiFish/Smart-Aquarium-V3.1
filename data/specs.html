@@ -366,6 +366,30 @@
             .catch(error => {
                 document.getElementById('versionInfo').textContent = 'error';
             });
+
+        // Error polling: check /api/error every 5 seconds and alert if a new error message is present
+        (function errorPoller() {
+            let lastErrorMsg = "";
+            async function pollError() {
+                try {
+                    const resp = await fetch('/api/error?_=' + Date.now());
+                    if (!resp.ok) return;
+                    const data = await resp.json();
+                    const msg = (data && data.error) ? String(data.error).trim() : "";
+                    if (msg && msg !== lastErrorMsg) {
+                        alert("Device Error:\n\n" + msg);
+                        lastErrorMsg = msg;
+                    } else if (!msg) {
+                        lastErrorMsg = "";
+                    }
+                } catch (e) {
+                    // Ignore fetch errors
+                } finally {
+                    setTimeout(pollError, 5000);
+                }
+            }
+            pollError();
+        })();
     </script>
 </body>
 
