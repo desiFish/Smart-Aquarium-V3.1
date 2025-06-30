@@ -30,7 +30,7 @@
 #include "RTClib.h"
 
 // Software version
-#define SWVersion "v1.1.2"
+#define SWVersion "v1.1.3"
 
 RTC_DS3231 rtc;
 WiFiUDP ntpUDP;

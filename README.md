@@ -256,7 +256,7 @@ You can upload these files directly using the ElegantOTA web interface:
 
 The system provides a simple backup and restore feature for your convenience:
 
-- **Backup:** Click the Backup button on the Settings page to save all current configuration data (including WiFi, NTP, static IP, relay names, schedules, and more) to your PC or smartphone as a single file. This is highly recommended before performing any software or hardware updates.
+- **Backup:** Click the Backup button on the Settings page to save all current configuration data (including WiFi, NTP, static IP, relay names, schedules, and more) to your PC or smartphone as a single file. The backup file will be named as `aquariumBackup<date>.json` (e.g., `aquariumBackup30062025.json`). This is highly recommended before performing any software or hardware updates.
 
 - **Restore:** To restore, simply select your backup file using the Restore option on the Settings page. The system will restore everything—literally all your previous settings and configuration will be reinstated automatically.
 
