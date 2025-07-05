@@ -262,6 +262,8 @@ The system provides a simple backup and restore feature for your convenience:
 
 This makes it easy to recover your setup after updates or hardware changes, ensuring a seamless experience.
 
+> ⚡ **Performance Tip:** Be sure to select **160 MHz CPU speed** from Arduino IDE → Tools. This project will work just fine on 80 MHz, but 160 MHz is recommended for the best experience.
+
 > ⚠️ **Note:** In rare cases, the restore process may fail due to browser or network issues. If this happens, simply reload the page and try the restore again.
 
 > 💡 **Tip**: After the initial wired upload, all future updates can be done wirelessly through ElegantOTA. This includes both code and filesystem updates. Just make sure to have backup.
