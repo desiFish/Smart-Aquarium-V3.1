@@ -45,6 +45,7 @@
 CRGB leds[NUM_LEDS];
 
 RTC_DS3231 rtc;
+// RTC_DS1307 rtc; // Uncomment if using DS1307 RTC
 WiFiUDP ntpUDP;
 
 // --- NTP/Timezone config variables ---
