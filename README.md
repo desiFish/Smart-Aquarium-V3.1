@@ -199,6 +199,23 @@ This makes the system more flexible and user-friendly, allowing for easy adjustm
 All libraries can be installed through the Arduino Library Manager. These specific libraries are mandatory for proper functionality of the ElegantOTA system.
 
 ## 🚀 Installation
+## 🛠️ CH340 Driver Troubleshooting
+
+Some ESP8266 modules use the CH340 USB-to-serial chip, which may occasionally cause upload problems. If you encounter an error like:
+
+```text
+lolin d1 mini A fatal esptool.py error occurred: Cannot configure port, something went wrong. Original message: PermissionError(13, 'A device attached to the system is not functioning.', None, 31)esptool.py v3.0 Serial port COM4
+```
+
+Follow these steps to resolve it using the provided CH340 driver in the `src` folder:
+
+1. Go to the `src` folder and locate `CH34x_Install_Windows_v3_4.zip`.
+2. Unzip the file and run the installer.
+3. Click the **Uninstall** button first.
+4. After successful uninstallation, click the **Install** button.
+5. Once installation is complete, try uploading your program again.
+
+This issue may occur randomly. If it happens again, simply repeat the above steps.
 
 1. Clone this repository:
    ```bash
