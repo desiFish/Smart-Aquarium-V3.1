@@ -28,9 +28,21 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include "RTClib.h"
+// FastLED for LED control
+#include <FastLED.h>
 
 // Software version
-#define SWVersion "v1.1.3"
+#define SWVersion "v1.1.4"
+
+// How many leds in your strip?
+#define NUM_LEDS 1
+// For led chips like WS2812, which have a data line, ground, and power, you just
+// need to define DATA_PIN.
+#define DATA_PIN 15
+// Buzzer pin
+#define BUZZER_PIN 2
+// Define the array of leds
+CRGB leds[NUM_LEDS];
 
 RTC_DS3231 rtc;
 WiFiUDP ntpUDP;
@@ -181,6 +193,21 @@ bool wifiUseStaticIp = false;
 AsyncWebServer server(80);
 
 unsigned long ota_progress_millis = 0;
+// --- Beep function ---
+void beep(unsigned int durationMs = 100, unsigned int count = 1, unsigned int pauseMs = 100)
+{
+    pinMode(BUZZER_PIN, OUTPUT);
+    for (unsigned int i = 0; i < count; i++)
+    {
+        digitalWrite(BUZZER_PIN, HIGH);
+        delay(durationMs);
+        digitalWrite(BUZZER_PIN, LOW);
+        if (i < count - 1)
+        {
+            delay(pauseMs);
+        }
+    }
+}
 
 void onOTAStart()
 {
@@ -664,12 +691,25 @@ bool readRtcUpdateFlag()
 
 void setup()
 {
-    Serial.begin(115200);
+    beep();
     Wire.begin();
+    FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
+    FastLED.setBrightness(100);
+    FastLED.delay(500);
+
+    leds[0] = CRGB::Green;
+    FastLED.show();
+
+    Serial.println("Smart Aquarium V3.1 - ESP8266 Setup");
+    Serial.begin(115200);
+
     if (!LittleFS.begin())
     {
         Serial.println("LittleFS Mount Failed");
         errorBuffer = "Filesystem mount failed. Device cannot operate. Reboot or reflash required.";
+        // Error: red
+        leds[0] = CRGB::Red;
+        FastLED.show();
         return;
     }
 
@@ -680,6 +720,9 @@ void setup()
         {
             Serial.println("Failed to create /config directory");
             errorBuffer = "Failed to create /config directory. Filesystem error.";
+            // Error: red
+            leds[0] = CRGB::Red;
+            FastLED.show();
         }
     }
 
@@ -703,11 +746,11 @@ void setup()
             if (wifiDns1.length())
                 dns1.fromString(wifiDns1);
             else
-                dns1 = IPAddress(1, 1, 1, 1);
+                dns1 = IPAddress(1, 1, 1, 1); // cloudflare DNS
             if (wifiDns2.length())
                 dns2.fromString(wifiDns2);
             else
-                dns2 = IPAddress(1, 0, 0, 1);
+                dns2 = IPAddress(1, 0, 0, 1); // cloudflare secondary DNS
 
             if (staticIpOk)
             {
@@ -716,18 +759,24 @@ void setup()
                     Serial.println("STA Failed to configure static IP");
                     errorBuffer = "Failed to configure static IP. Check IP/gateway/subnet values.";
                     staticIpOk = false;
+                    leds[0] = CRGB::Blue;
+                    FastLED.show();
                 }
             }
             else
             {
                 Serial.println("Invalid static IP configuration");
                 errorBuffer = "Invalid static IP configuration. Check IP/gateway/subnet values.";
+                leds[0] = CRGB::Blue;
+                FastLED.show();
             }
         }
         if (!staticIpOk)
         {
             // Mark as not configured so AP mode is started
             wifiConfigured = false;
+            leds[0] = CRGB::Blue;
+            FastLED.show();
         }
         else
         {
@@ -735,6 +784,8 @@ void setup()
             WiFi.begin(wifiSsid.c_str(), wifiPassword.c_str());
             Serial.printf("Connecting to WiFi SSID: %s\n", wifiSsid.c_str());
             unsigned long startAttemptTime = millis();
+            leds[0] = CRGB::White; // White while connecting
+            FastLED.show();
             while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 20000)
             {
                 delay(500);
@@ -756,6 +807,8 @@ void setup()
     // ensure AP mode if WiFi is not connected
     if (!wifiConfigured || WiFi.status() != WL_CONNECTED)
     {
+        leds[0] = CRGB::Blue;
+        FastLED.show();
         // Start in AP mode for configuration
         WiFi.mode(WIFI_AP);
         String apSsid = "Aquarium-Setup";
@@ -796,6 +849,9 @@ void setup()
     {
         Serial.println("Couldn't find RTC");
         errorBuffer = "RTC not found. Please check hardware connection.";
+        // Error: red
+        leds[0] = CRGB::Red;
+        FastLED.show();
     }
 
     // Initialize relay objects
@@ -820,12 +876,32 @@ void setup()
         rtcTimeUpdater();
         writeRtcUpdateFlag(false);
     }
+
+    leds[0] = CRGB::Black;
+    FastLED.show();
+    FastLED.delay(1000);
+
+    Serial.println("Setup complete");
+    FastLED.setBrightness(10);
 }
 
 void loop()
 {
     ElegantOTA.loop();
     unsigned long currentMillis = millis(); // Update time if requested
+
+    static unsigned long lastGreenFlash = 0;
+    if (currentMillis - lastGreenFlash >= 2000)
+    {
+        leds[0] = CRGB::Green;
+        FastLED.show();
+        FastLED.delay(10);
+        leds[0] = CRGB::Black;
+        FastLED.show();
+        FastLED.delay(10);
+        lastGreenFlash = currentMillis;
+    }
+
     if (updateTime)
     {
         if (rtcTimeUpdater())

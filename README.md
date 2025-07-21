@@ -1,6 +1,6 @@
 # Smart Aquarium V3.1 🐟
 
-> 📢 **Looking for a simpler version?** Check out [Smart Aquarium V3.1 Lite](https://github.com/desiFish/Smart-Aquarium-V3.1-Lite) - A scaled down 2-relay version of this project without RTC!
+> 📢 **Looking for a simpler version?** Check out [Smart Aquarium V3.1 Lite](https://github.com/desiFish/Smart-Aquarium-V3.1-Lite) - A scaled down 2-relay version of this project!
 
 > 📢 **New Project Notice**: ESP32 version: [Smart Aquarium V4.0](https://github.com/desiFish/Smart-Aquarium-V4.0) is under development that supports similar powerful customization options and advanced monitoring features for aquarium inhabitants. Be the first ones to try it out and give feedbacks! 🚀
 
@@ -130,13 +130,15 @@ This system is highly scalable and can be easily modified to control more or few
 ## 🔧 Hardware Requirements
 
 - ESP8266 12-E NodeMCU Development Board (or any compatible ESP8266 module)
-- DS3231 RTC Module
-- 4-Channel Relay Module
-- Power Supply (5V)  
-  - *Ensure the power supply is well-filtered and of good quality to avoid instability or malfunction. A more robust power supply circuit is currently under development and will be made available in the future.*
-- WiFi Connection
+- 2-Channel Relay Module
+- RTC Module: DS1307 (default) or DS3231 (select in code before uploading)
+- Power Supply (5V)
+- Stable WiFi Connection (2.4GHz network with internet access for NTP)
+  > ⚠️ **Important**: RTC module is required for timekeeping. DS3231 is recommended for higher accuracy and reliability. Internet connectivity is only needed for time synchronization via NTP (manual update).
 
-> 💡 **Compatibility**: While this project is developed and tested on the ESP8266 12-E NodeMCU Kit, it should work on other ESP8266-based development boards with minimal modifications. Just ensure your board has enough GPIO pins for the relay and RTC connections.
+> 💡 **Compatibility**: This project is developed and tested on the ESP8266 12-E NodeMCU Kit.  
+> It has been tested on **NodeMCU 1.0** and **LOLIN (Wemos) D1 R2 Mini** boards.  
+> It works with other ESP8266-based boards with minimal changes. Ensure your board has enough GPIO pins for relays and I2C (SDA/SCL) for RTC.
 
 ### ESP8266 Pinout
 <div align="center">
@@ -182,6 +184,7 @@ This makes the system more flexible and user-friendly, allowing for easy adjustm
 - [RTClib](https://github.com/adafruit/RTClib) - **Required Latest Version**
 - ElegantOTA
 - NTPClient
+- FastLED
 
 All libraries can be installed through the Arduino Library Manager. These specific libraries are mandatory for proper functionality of the ElegantOTA system.
 
@@ -289,22 +292,29 @@ This makes it easy to recover your setup after updates or hardware changes, ensu
 The system provides a modern, fully responsive web interface optimized for both desktop and mobile devices:
 
 - **Main Dashboard** (`index.html`)
-  - Responsive Relay Controls
-  - Touch-friendly Mode Selection
-  - Intuitive Timer Settings
-  - Real-time Status Monitoring
-  - Adaptive Layout for All Screen Sizes
+  - Control and monitor each relay channel in real time
+  - Select operation mode: Manual, Auto, Timer, or Toggle
+  - Set schedules, timers, and toggle intervals
+  - Enable/disable relays
+  - View live relay status and mode indicators
+  - Responsive and touch-friendly for mobile and desktop
 
 - **Settings Page** (`settings.html`)
+  - Configure WiFi and network settings (DHCP/static IP)
+  - Change relay names
+  - Set NTP server and timezone
+  - Update RTC time from NTP
+  - Backup and restore configuration
+  - View current time, date, and day of week
   - Mobile-optimized Input Fields
   - Easy Touch Navigation
   - Responsive Time Controls
   - Accessible System Information
 
-- **Hardware Info Page** (`specs.html`)
-  - Real-time ESP8266 system and WiFi details
-  - Intuitive color-coded WiFi signal strength indicator
-  - Fully responsive and mobile-friendly layout
+- **Hardware Specs Page** (`specs.html`)
+  - Displays detailed hardware information such as chip ID, flash size, CPU frequency, WiFi signal strength, and more.
+  - Auto-refreshes every 5 seconds.
+  - Shows connection status and firmware version.
 
 ## 🔌 API Endpoints
 
