@@ -43,31 +43,76 @@ By using this project, you acknowledge and agree to the following:
 
 ## 📸 Gallery
 
-<div align="center">
-<img src="src/index.png" alt="Main Dashboard" width="600"/>
-<p><em>Main Dashboard - Desktop View: Control panel showing relay states and operation modes</em></p>
 
-<img src="src/settings.png" alt="Settings Interface" width="600"/>
-<p><em>Settings Page - Desktop View: Configuration interface for relay names and system settings</em></p>
-
-<img src="src/specs.png" alt="Hardware Info Desktop" width="600"/>
-<p><em>Hardware Info Page - Desktop View: Real-time ESP8266 system and WiFi details</em></p>
-
-<div style="display: flex; justify-content: center; gap: 20px;">
-  <div>
-    <img src="src/index-phone.png" alt="Mobile Dashboard" width="250"/>
-    <p><em>Main Dashboard - Mobile View</em></p>
-  </div>
-  <div>
-    <img src="src/settings-phone.png" alt="Mobile Settings" width="250"/>
-    <p><em>Settings Page - Mobile View</em></p>
-  </div>
-  <div>
-    <img src="src/specs-phone.png" alt="Hardware Info Mobile" width="250"/>
-    <p><em>Hardware Info Page - Mobile View</em></p>
-  </div>
-</div>
-</div>
+<table>
+  <tr>
+    <td align="center">
+      <img src="src/index.png" alt="Main Dashboard" width="350"/><br/>
+      <em>Main Dashboard - Desktop View</em>
+    </td>
+    <td align="center">
+      <img src="src/settings.png" alt="Settings Interface" width="350"/><br/>
+      <em>Settings Page - Desktop View</em>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="src/specs.png" alt="Hardware Info Desktop" width="350"/><br/>
+      <em>Hardware Info Page - Desktop View</em>
+    </td>
+    <td align="center">
+      <img src="src/index-phone.png" alt="Mobile Dashboard" width="350"/><br/>
+      <em>Main Dashboard - Mobile View</em>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="src/settings-phone.png" alt="Mobile Settings" width="350"/><br/>
+      <em>Settings Page - Mobile View</em>
+    </td>
+    <td align="center">
+      <img src="src/specs-phone.png" alt="Hardware Info Mobile" width="350"/><br/>
+      <em>Hardware Info Page - Mobile View</em>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="src/x1.jpg" alt="Gallery Image 1" width="350"/><br/>
+      <em>Custom Gallery Image 1</em>
+    </td>
+    <td align="center">
+      <img src="src/x2.jpg" alt="Gallery Image 2" width="350"/><br/>
+      <em>Custom Gallery Image 2</em>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="src/x3.jpg" alt="Gallery Image 3" width="350"/><br/>
+      <em>Custom Gallery Image 3</em>
+    </td>
+    <td align="center">
+      <img src="src/x4.jpg" alt="Gallery Image 4" width="350"/><br/>
+      <em>Custom Gallery Image 4</em>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="src/x5.jpg" alt="Gallery Image 5" width="350"/><br/>
+      <em>Custom Gallery Image 5</em>
+    </td>
+    <td align="center">
+      <img src="src/x6.jpg" alt="Gallery Image 6" width="350"/><br/>
+      <em>Custom Gallery Image 6</em>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="src/x7.jpg" alt="Gallery Image 7" width="350"/><br/>
+      <em>Custom Gallery Image 7</em>
+    </td>
+    <td></td>
+  </tr>
+</table>
 
 ## 🕒 RTC Support (DS1307/DS3231)
 
