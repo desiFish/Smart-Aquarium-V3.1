@@ -69,6 +69,16 @@ By using this project, you acknowledge and agree to the following:
 </div>
 </div>
 
+## 🕒 RTC Support (DS1307/DS3231)
+
+This project supports both **DS1307** and **DS3231** RTC modules for accurate timekeeping.  
+- By default, the code uses DS1307.  
+- To use DS3231, uncomment the relevant line in the code (`RTC_DS3231 rtc;`) and comment out the DS1307 line before uploading.
+- Both modules connect via I2C (SDA/SCL) to the ESP8266.
+- RTC time can be updated from the **Settings** page in the web interface.
+
+> **Note:** The RTC keeps time even when the ESP8266 is powered off. Time synchronization from NTP is only required after initial setup or if the RTC loses power.
+
 ## 🌟 Features
 
 - **🎛️ Multiple Control Modes**
