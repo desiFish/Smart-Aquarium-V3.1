@@ -213,10 +213,10 @@ void beep(unsigned int durationMs = 100, unsigned int count = 1, unsigned int pa
 void onOTAStart()
 {
     Serial.println("OTA update started!");
+    otaActive = 1; // Mark OTA as active
     pixels.setBrightness(100);
     pixels.setPixelColor(0, pixels.Color(200, 0, 0));
     pixels.show();
-    otaActive = 1; // Mark OTA as active
 }
 
 void onOTAProgress(size_t current, size_t final)
