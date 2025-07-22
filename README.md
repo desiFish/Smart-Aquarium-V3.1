@@ -1,8 +1,8 @@
 # Smart Aquarium V3.1 🐟
 
-> 📢 **Looking for a simpler version?** Check out [Smart Aquarium V3.1 Lite](https://github.com/desiFish/Smart-Aquarium-V3.1-Lite) - A scaled down 2-relay version of this project!
+> 📢 **Project Inspiration & Update**: This project was inspired by Project MINA, also known as [Smart Aquarium V4.0](https://github.com/desiFish/Smart-Aquarium-V4.0). The V4.0 project is currently on hold due to hardware unavailability, but will be completed in the near future. Even in its current state, V4.0 is stable and working—do try it out and give your feedback! 🚀
 
-> 📢 **New Project Notice**: ESP32 version: [Smart Aquarium V4.0](https://github.com/desiFish/Smart-Aquarium-V4.0) is under development that supports similar powerful customization options and advanced monitoring features for aquarium inhabitants. Be the first ones to try it out and give feedbacks! 🚀
+> 📢 **Looking for a simpler version?** Check out [Smart Aquarium V3.1 Lite](https://github.com/desiFish/Smart-Aquarium-V3.1-Lite) - A scaled down 2-relay version of this project!
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/desiFish/Smart-Aquarium-V3.1)](https://github.com/desiFish/Smart-Aquarium-V3.1/releases)
 [![GitHub issues](https://img.shields.io/github/issues/desiFish/Smart-Aquarium-V3.1)](https://github.com/desiFish/Smart-Aquarium-V3.1/issues)
