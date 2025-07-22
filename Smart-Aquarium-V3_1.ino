@@ -55,7 +55,12 @@ String timezoneString;
 // NTP client instance (will be re-created if settings change)
 NTPClient timeClient(ntpUDP, ntpServer.c_str(), timezoneOffset); // check Readme for more details
 
-// --- NTP config persistence ---
+/**
+ * @brief Saves NTP configuration to the filesystem.
+ *
+ * Serializes NTP server, timezone offset, and timezone string to /ntp.json in LittleFS.
+ * Used to persist NTP settings across reboots and configuration changes.
+ */
 void saveNtpConfigToFS()
 {
     JsonDocument doc;
@@ -70,6 +75,12 @@ void saveNtpConfigToFS()
     }
 }
 
+/**
+ * @brief Loads NTP configuration from the filesystem.
+ *
+ * Reads and deserializes /ntp.json from LittleFS to restore NTP server, timezone offset, and timezone string.
+ * Uses default values if the file is missing or corrupt.
+ */
 void loadNtpConfigFromFS()
 {
     Serial.println("[DEBUG] loadNtpConfigFromFS called");
@@ -105,7 +116,21 @@ void loadNtpConfigFromFS()
     }
 }
 
-// WiFi config persistence
+/**
+ * @brief Saves WiFi configuration to the filesystem.
+ *
+ * Serializes SSID, password, IP, gateway, subnet, DNS, and static IP flag to /wifi.json in LittleFS.
+ * Used to persist WiFi settings for automatic reconnection and configuration.
+ *
+ * @param ssidVal WiFi SSID
+ * @param passwordVal WiFi password
+ * @param ip Device IP address
+ * @param gateway Network gateway
+ * @param subnet Subnet mask
+ * @param dns1 Primary DNS
+ * @param dns2 Secondary DNS
+ * @param useStaticIp Whether to use static IP
+ */
 void saveWifiConfigToFS(const String &ssidVal, const String &passwordVal,
                         const String &ip, const String &gateway, const String &subnet,
                         const String &dns1, const String &dns2, bool useStaticIp)
@@ -139,6 +164,21 @@ void saveWifiConfigToFS(const String &ssidVal, const String &passwordVal,
     }
 }
 
+/**
+ * @brief Loads WiFi configuration from the filesystem.
+ *
+ * Reads and deserializes /wifi.json from LittleFS to restore SSID, password, IP, gateway, subnet, DNS, and static IP flag.
+ * Populates the provided references and pointers with loaded values.
+ *
+ * @param ssidVal Reference to SSID string
+ * @param passwordVal Reference to password string
+ * @param ip Pointer to IP string
+ * @param gateway Pointer to gateway string
+ * @param subnet Pointer to subnet string
+ * @param dns1 Pointer to primary DNS string
+ * @param dns2 Pointer to secondary DNS string
+ * @param useStaticIp Pointer to static IP flag
+ */
 void loadWifiConfigFromFS(String &ssidVal, String &passwordVal,
                           String *ip, String *gateway, String *subnet,
                           String *dns1, String *dns2, bool *useStaticIp)
@@ -194,7 +234,19 @@ AsyncWebServer server(80);
 
 unsigned long ota_progress_millis = 0;
 byte otaActive = 0; // 0 = not in OTA, 1 = OTA in progress
-// --- Beep function ---
+/**
+ * @brief Beep the buzzer for audible feedback.
+ *
+ * This function activates the buzzer for a specified number of beeps, each with a given duration and pause between beeps.
+ *
+ * @param durationMs Duration of each beep in milliseconds (default: 100ms)
+ * @param count Number of beeps to sound (default: 1)
+ * @param pauseMs Pause between beeps in milliseconds (default: 100ms)
+ *
+ * Example usage:
+ *   beep(100, 3, 200); // 3 short beeps with 200ms pause
+ *   beep(300, 2, 300); // 2 long beeps with 300ms pause
+ */
 void beep(unsigned int durationMs = 100, unsigned int count = 1, unsigned int pauseMs = 100)
 {
     pinMode(BUZZER_PIN, OUTPUT);
@@ -210,6 +262,11 @@ void beep(unsigned int durationMs = 100, unsigned int count = 1, unsigned int pa
     }
 }
 
+/**
+ * @brief OTA update start callback.
+ *
+ * Called when ElegantOTA update begins. Sets LED to bright red and marks OTA as active.
+ */
 void onOTAStart()
 {
     Serial.println("OTA update started!");
@@ -219,6 +276,14 @@ void onOTAStart()
     pixels.show();
 }
 
+/**
+ * @brief OTA update progress callback.
+ *
+ * Called during ElegantOTA update. Alternates LED between blue and off to indicate progress.
+ *
+ * @param current Current number of bytes received
+ * @param final Total number of bytes to be received
+ */
 void onOTAProgress(size_t current, size_t final)
 {
     static byte flag = 1;
@@ -240,6 +305,13 @@ void onOTAProgress(size_t current, size_t final)
     }
 }
 
+/**
+ * @brief OTA update end callback.
+ *
+ * Called when ElegantOTA update finishes. Sets LED to white on success, red on error.
+ *
+ * @param success True if OTA update succeeded, false otherwise
+ */
 void onOTAEnd(bool success)
 {
     if (success)
@@ -670,6 +742,13 @@ void setupServer();
 bool rtcTimeUpdater();
 
 // Config management function
+/**
+ * @brief Ensures the /config directory exists in LittleFS.
+ *
+ * Creates the /config directory if it does not exist. Returns true if the directory exists or was created successfully.
+ *
+ * @return true if /config exists or was created, false otherwise
+ */
 bool ensureConfigDirectory()
 {
     if (!LittleFS.exists("/config"))
@@ -684,7 +763,17 @@ volatile bool shouldReboot = false;
 // --- Error message buffer for API ---
 String errorBuffer = "";
 
-// Helper functions for RTC update flag (optimized: short binary file, 1 byte)
+/* Error code for persistent alert signaling
+0 = no error, 1 = FS mount, 2 = config dir, 3 = RTC*/
+byte errorCode = 0;
+
+/**
+ * @brief Writes the RTC update flag to the filesystem.
+ *
+ * Stores a single byte (0x01 for true, 0x00 for false) in /r to indicate if RTC time update is required after reboot.
+ *
+ * @param flag True to set update required, false otherwise
+ */
 void writeRtcUpdateFlag(bool flag)
 {
     File f = LittleFS.open("/r", "w");
@@ -696,6 +785,16 @@ void writeRtcUpdateFlag(bool flag)
     }
 }
 
+/**
+ * @brief Reads the RTC update flag from the filesystem.
+ *
+ * This function checks for the existence of the RTC update flag file ("/r") in LittleFS.
+ * If present, it reads a single byte to determine if an RTC update is required after reboot.
+ * Returns true if the flag is set (0x01), false otherwise.
+ * Used to trigger RTC time synchronization after configuration changes.
+ *
+ * @return true if RTC update is required, false otherwise.
+ */
 bool readRtcUpdateFlag()
 {
     if (!LittleFS.exists("/r"))
@@ -709,6 +808,12 @@ bool readRtcUpdateFlag()
     return val == 0x01;
 }
 
+/**
+ * @brief Main setup routine for Smart Aquarium V3.1.
+ *
+ * Initializes hardware, loads configuration, sets up WiFi, filesystem, RTC, relays, OTA, and web server.
+ * Handles error signaling and LED status indications.
+ */
 void setup()
 {
     beep();
@@ -726,11 +831,7 @@ void setup()
     {
         Serial.println("LittleFS Mount Failed");
         errorBuffer = "Filesystem mount failed. Device cannot operate. Reboot or reflash required.";
-        // Error: red
-
-        pixels.setPixelColor(0, pixels.Color(150, 0, 0));
-        pixels.show();
-        return;
+        errorCode = 1; // Filesystem mount error
     }
 
     // Ensure config directory exists
@@ -740,10 +841,7 @@ void setup()
         {
             Serial.println("Failed to create /config directory");
             errorBuffer = "Failed to create /config directory. Filesystem error.";
-            // Error: red
-
-            pixels.setPixelColor(0, pixels.Color(150, 0, 0));
-            pixels.show();
+            errorCode = 2; // Config dir error
         }
     }
 
@@ -798,7 +896,6 @@ void setup()
         {
             // Mark as not configured so AP mode is started
             wifiConfigured = false;
-
             pixels.setPixelColor(0, pixels.Color(0, 0, 150));
             pixels.show();
         }
@@ -835,7 +932,6 @@ void setup()
     // ensure AP mode if WiFi is not connected
     if (!wifiConfigured || WiFi.status() != WL_CONNECTED)
     {
-
         pixels.setPixelColor(0, pixels.Color(0, 0, 150));
         pixels.show();
         // Start in AP mode for configuration
@@ -858,8 +954,13 @@ void setup()
             unsigned long startAttemptTime = millis();
             while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 10000)
             {
-                delay(500);
+                pixels.setPixelColor(0, pixels.Color(0, 0, 150));
+                pixels.show();
+                delay(250);
                 Serial.print(".");
+                pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+                pixels.show();
+                delay(250);
             }
             if (WiFi.status() == WL_CONNECTED)
             {
@@ -878,10 +979,7 @@ void setup()
     {
         Serial.println("Couldn't find RTC");
         errorBuffer = "RTC not found. Please check hardware connection.";
-        // Error: red
-
-        pixels.setPixelColor(0, pixels.Color(150, 0, 0));
-        pixels.show();
+        errorCode = 3; // RTC error
     }
 
     // Initialize relay objects
@@ -913,24 +1011,59 @@ void setup()
     Serial.println("Setup complete");
 }
 
+/**
+ * @brief Main loop routine for Smart Aquarium V3.1.
+ *
+ * Handles OTA updates, relay timers, toggle modes, schedules, and graceful reboot.
+ * Provides periodic LED status indication and error handling.
+ */
 void loop()
 {
     ElegantOTA.loop();
     unsigned long currentMillis = millis(); // Update time if requested
 
-    static unsigned long lastGreenFlash = 0;
-    if (!otaActive)
+    // Persistent error signaling if errorCode is set
+    static unsigned long lastErrorSignal = 0;
+    if (errorCode > 0)
     {
-        if (currentMillis - lastGreenFlash >= 2000)
+        if (currentMillis - lastErrorSignal >= 2000)
         {
-            pixels.setBrightness(10);
-            pixels.setPixelColor(0, pixels.Color(0, 250, 0));
+            pixels.setBrightness(100);
+            pixels.setPixelColor(0, pixels.Color(150, 0, 0));
             pixels.show();
-            delay(10);
-            pixels.setPixelColor(0, pixels.Color(0, 0, 0));
-            pixels.show();
-            delay(10);
-            lastGreenFlash = currentMillis;
+            lastErrorSignal = currentMillis;
+            switch (errorCode)
+            {
+            case 1:                // Filesystem mount error
+                beep(100, 3, 200); // 3 short beeps
+                break;
+            case 2:                // Config dir error
+                beep(300, 2, 300); // 2 long beeps
+                break;
+            case 3:              // RTC error
+                beep(100, 1, 0); // 1 short beep
+                break;
+            default:
+                break;
+            }
+        }
+    }
+    else
+    {
+        static unsigned long lastGreenFlash = 0;
+        if (!otaActive)
+        {
+            if (currentMillis - lastGreenFlash >= 2000)
+            {
+                pixels.setBrightness(10);
+                pixels.setPixelColor(0, pixels.Color(0, 250, 0));
+                pixels.show();
+                delay(10);
+                pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+                pixels.show();
+                delay(10);
+                lastGreenFlash = currentMillis;
+            }
         }
     }
 
@@ -996,19 +1129,29 @@ void loop()
     if (shouldReboot)
     {
         Serial.println("Graceful reboot: stopping server...");
+        pixels.setBrightness(100);
+        pixels.setPixelColor(0, pixels.Color(200, 150, 0)); // Deep yellow for reboot
+        pixels.show();
         server.end();
-        delay(200); // let response finish sending
+        delay(1000); // let response finish sending
         ESP.restart();
     }
 }
 
+/**
+ * @brief Updates RTC time from NTP server.
+ *
+ * Attempts to synchronize RTC time using the configured NTP server and timezone offset.
+ * Returns true if successful, false otherwise. Updates errorBuffer on failure.
+ *
+ * @return true if RTC time was updated, false otherwise
+ */
 bool rtcTimeUpdater()
 {
     if (!rtc.begin())
     {
         Serial.println("[DEBUG] RTC not found in rtcTimeUpdater");
         errorBuffer = "RTC not found. Please check hardware connection.";
-        // return false;
     }
     if (WiFi.status() == WL_CONNECTED)
     {
@@ -1057,6 +1200,11 @@ bool rtcTimeUpdater()
     return false;
 }
 
+/**
+ * @brief Sets up the HTTP server and API endpoints.
+ *
+ * Configures static file serving and all RESTful API endpoints for system control, configuration, and status.
+ */
 void setupServer()
 {
     // Serve static files directly
@@ -1248,6 +1396,13 @@ void setupServer()
         request->send(200, "application/json", response); });
 }
 
+/**
+ * @brief Sets up API endpoints for a specific relay.
+ *
+ * Registers endpoints for relay status, control, mode, schedule, timer, toggle mode, and system state.
+ *
+ * @param relayIndex Index of the relay (1-based)
+ */
 void setupRelayEndpoints(byte relayIndex)
 {
     String baseEndpoint = "/api/led" + String(relayIndex);

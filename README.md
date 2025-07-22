@@ -41,7 +41,49 @@ By using this project, you acknowledge and agree to the following:
 
 **USE THIS PROJECT AT YOUR OWN RISK**
 
-## 📸 Gallery
+
+## 🔔 Beep Codes Reference Table
+
+| Error Condition                      | Beep Code         | Description           |
+|--------------------------------------|-------------------|-----------------------|
+| Filesystem mount failed              | 3 short beeps     | beep(100, 3, 200)     |
+| Failed to create /config directory   | 2 long beeps      | beep(300, 2, 300)     |
+| RTC not found                        | 1 short beep      | beep(100, 1, 0)       |
+
+
+Refer to the beep codes above for troubleshooting during device startup. Each error condition triggers a distinct beep pattern for easy identification.
+
+## 💡 LED Color Codes & Status Indications
+
+The onboard RGB LED provides visual feedback for key system states and errors:
+
+| Operation / Error Condition         | LED Color / Pattern         | Description                                  |
+|-------------------------------------|-----------------------------|----------------------------------------------|
+| Normal operation (idle/ready)       | Green flash (every 2s)      | System running normally                      |
+| WiFi connecting                     | White blink                 | Attempting WiFi connection                   |
+| WiFi/AP mode active                 | Blue                        | Device in AP mode for setup                  |
+| Filesystem/Config/RTC error         | Solid Red                   | Critical error (see beep codes above)        |
+| OTA update started                  | Bright Red                  | OTA update in progress (start)               |
+| OTA update progress                 | Blue blink                  | OTA update progress (alternating blue/black) |
+| OTA update finished (success)       | White                       | OTA update completed successfully            |
+| OTA update finished (error)         | Red                         | OTA update failed                            |
+| Graceful reboot (via API)           | Deep Yellow (100)           | Device is rebooting after API call           |
+
+These LED patterns help you quickly identify the system status and troubleshoot issues. For details on each color and pattern, refer to the firmware code comments.
+
+## �️ Errors & Alerts via Web Interface
+
+In addition to audible beep codes and LED color indications, the Smart Aquarium V3.1 system provides error and alert notifications directly through the web interface:
+
+- **Error Messages:** Critical errors (such as RTC failure, filesystem issues, or configuration problems) are displayed as alerts or status messages on the web dashboard and settings page.
+- **API Endpoint:** The `/api/error` endpoint returns the latest error message, which is cleared after being read. This allows the web UI to fetch and display real-time error information.
+- **RTC Status:** If the RTC is not connected or there is a time sync issue, the settings page will show `RTC_ERROR` or a warning notification.
+- **Browser Notifications:** The web interface automatically notifies you if the RTC time is not synchronized, or if there are configuration issues requiring attention.
+- **Status Indicators:** Relay status, WiFi connection, and system health are shown live on the dashboard, with alerts for any abnormal conditions.
+
+These web-based alerts and error messages help you quickly identify and resolve issues, even if you miss the initial beep or LED indication. For troubleshooting, always check the web interface for the latest system status and error details.
+
+## �📸 Gallery
 
 
 <table>
