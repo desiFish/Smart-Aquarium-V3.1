@@ -193,6 +193,7 @@ bool wifiUseStaticIp = false;
 AsyncWebServer server(80);
 
 unsigned long ota_progress_millis = 0;
+byte otaActive = 0; // 0 = not in OTA, 1 = OTA in progress
 // --- Beep function ---
 void beep(unsigned int durationMs = 100, unsigned int count = 1, unsigned int pauseMs = 100)
 {
@@ -215,14 +216,27 @@ void onOTAStart()
     pixels.setBrightness(100);
     pixels.setPixelColor(0, pixels.Color(200, 0, 0));
     pixels.show();
+    otaActive = 1; // Mark OTA as active
 }
 
 void onOTAProgress(size_t current, size_t final)
 {
-    if (millis() - ota_progress_millis > 1000)
+    static byte flag = 1;
+    if (millis() - ota_progress_millis > 970)
     {
         ota_progress_millis = millis();
         Serial.printf("OTA Progress Current: %u bytes, Final: %u bytes\n", current, final);
+        if (flag)
+        {
+            pixels.setPixelColor(0, pixels.Color(0, 0, 100));
+            pixels.show();
+        }
+        else
+        {
+            pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+            pixels.show();
+        }
+        flag = !flag; // Toggle flag for alternating colors
     }
 }
 
@@ -231,7 +245,7 @@ void onOTAEnd(bool success)
     if (success)
     {
         Serial.println("OTA update finished successfully!");
-        pixels.setPixelColor(0, pixels.Color(0, 0, 200));
+        pixels.setPixelColor(0, pixels.Color(100, 100, 100));
     }
     else
     {
@@ -905,16 +919,19 @@ void loop()
     unsigned long currentMillis = millis(); // Update time if requested
 
     static unsigned long lastGreenFlash = 0;
-    if (currentMillis - lastGreenFlash >= 2000)
+    if (!otaActive)
     {
-        pixels.setBrightness(10);
-        pixels.setPixelColor(0, pixels.Color(0, 250, 0));
-        pixels.show();
-        delay(10);
-        pixels.setPixelColor(0, pixels.Color(0, 0, 0));
-        pixels.show();
-        delay(10);
-        lastGreenFlash = currentMillis;
+        if (currentMillis - lastGreenFlash >= 2000)
+        {
+            pixels.setBrightness(10);
+            pixels.setPixelColor(0, pixels.Color(0, 250, 0));
+            pixels.show();
+            delay(10);
+            pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+            pixels.show();
+            delay(10);
+            lastGreenFlash = currentMillis;
+        }
     }
 
     if (updateTime)
