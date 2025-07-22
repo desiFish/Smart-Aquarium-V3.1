@@ -32,7 +32,7 @@
 #include <Adafruit_NeoPixel.h>
 
 // Software version
-#define SWVersion "v1.1.4"
+#define SWVersion "v1.1.5"
 
 // Number of leds
 #define NUMPIXELS 1
