@@ -40,7 +40,7 @@
 #define PIN 15
 // Buzzer pin
 #define BUZZER_PIN 2
-// Define the array of leds
+// Define the leds
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
 RTC_DS3231 rtc;
@@ -212,6 +212,7 @@ void beep(unsigned int durationMs = 100, unsigned int count = 1, unsigned int pa
 void onOTAStart()
 {
     Serial.println("OTA update started!");
+    pixels.setBrightness(100);
     pixels.setPixelColor(0, pixels.Color(200, 0, 0));
     pixels.show();
 }
@@ -231,14 +232,13 @@ void onOTAEnd(bool success)
     {
         Serial.println("OTA update finished successfully!");
         pixels.setPixelColor(0, pixels.Color(0, 0, 200));
-        pixels.show();
     }
     else
     {
         Serial.println("There was an error during OTA update!");
         pixels.setPixelColor(0, pixels.Color(200, 0, 0));
-        pixels.show();
     }
+    pixels.show();
 }
 
 // ESP8266 gpio pins for relays
@@ -794,13 +794,16 @@ void setup()
             WiFi.begin(wifiSsid.c_str(), wifiPassword.c_str());
             Serial.printf("Connecting to WiFi SSID: %s\n", wifiSsid.c_str());
             unsigned long startAttemptTime = millis();
-
-            pixels.setPixelColor(0, pixels.Color(150, 150, 150));
-            pixels.show();
+            // Show progress on the LED
             while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 20000)
             {
-                delay(500);
+                pixels.setPixelColor(0, pixels.Color(150, 150, 150));
+                pixels.show();
+                delay(250);
                 Serial.print(".");
+                pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+                pixels.show();
+                delay(250);
             }
             if (WiFi.status() == WL_CONNECTED)
             {
