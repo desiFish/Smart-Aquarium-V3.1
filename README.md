@@ -16,7 +16,29 @@ An advanced, ESP8266-based interactive aquarium control system with a modern web
 
 > © 2025 desiFish. This project is protected by copyright law. All rights reserved unless explicitly stated under the GPL v3 license terms.
 
-## ⚠️ Safety Disclaimer
+## Index
+
+- [Safety Disclaimer ⚠️](#safety-disclaimer-️)
+- [Beep Codes Reference Table 🔔](#beep-codes-reference-table-)
+- [LED Color Codes & Status Indications 💡](#led-color-codes--status-indications-)
+- [Errors & Alerts via Web Interface 🖥️](#errors--alerts-via-web-interface-)
+- [Gallery 📸](#gallery-)
+- [RTC Support (DS1307/DS3231) 🕒](#rtc-support-ds1307ds3231-)
+- [Features 🌟](#features-)
+- [Scalability 🔄](#scalability-)
+- [Hardware Requirements 🔧](#hardware-requirements-)
+- [NTP Time Offset and Server Selection 🕒](#ntp-time-offset-and-server-selection-)
+- [Dependencies 📦](#dependencies-)
+- [Installation 🚀](#installation-)
+- [Backup and Restore 🗄️](#backup-and-restore-)
+- [Important Troubleshooting ⚠️](#important-troubleshooting-️)
+- [Web Interface 🌐](#web-interface-)
+- [API Endpoints 🔌](#api-endpoints-)
+- [Contributing 🎯](#contributing-)
+- [License 📜](#license-)
+- [Acknowledgments 🙏](#acknowledgments-)
+
+## Safety Disclaimer ⚠️
 
 **WARNING: This project involves working with HIGH VOLTAGE (220V AC) electrical systems which can be LETHAL.**
 
@@ -42,7 +64,7 @@ By using this project, you acknowledge and agree to the following:
 **USE THIS PROJECT AT YOUR OWN RISK**
 
 
-## 🔔 Beep Codes Reference Table
+## Beep Codes Reference Table 🔔
 
 | Error Condition                      | Beep Code         | Description           |
 |--------------------------------------|-------------------|-----------------------|
@@ -53,7 +75,7 @@ By using this project, you acknowledge and agree to the following:
 
 Refer to the beep codes above for troubleshooting during device startup. Each error condition triggers a distinct beep pattern for easy identification.
 
-## 💡 LED Color Codes & Status Indications
+## LED Color Codes & Status Indications 💡
 
 The onboard RGB LED provides visual feedback for key system states and errors:
 
@@ -83,7 +105,7 @@ In addition to audible beep codes and LED color indications, the Smart Aquarium 
 
 These web-based alerts and error messages help you quickly identify and resolve issues, even if you miss the initial beep or LED indication. For troubleshooting, always check the web interface for the latest system status and error details.
 
-## �📸 Gallery
+## Gallery 📸
 
 
 <table>
@@ -156,7 +178,7 @@ These web-based alerts and error messages help you quickly identify and resolve 
   </tr>
 </table>
 
-## 🕒 RTC Support (DS1307/DS3231)
+## RTC Support (DS1307/DS3231) 🕒
 
 This project supports both **DS1307** and **DS3231** RTC modules for accurate timekeeping.  
 - By default, the code uses DS1307.  
@@ -166,7 +188,7 @@ This project supports both **DS1307** and **DS3231** RTC modules for accurate ti
 
 > **Note:** The RTC keeps time even when the ESP8266 is powered off. Time synchronization from NTP is only required after initial setup or if the RTC loses power.
 
-## 🌟 Features
+## Features 🌟
 
 - **🎛️ Multiple Control Modes**
   - Manual Toggle Control
@@ -198,7 +220,7 @@ This project supports both **DS1307** and **DS3231** RTC modules for accurate ti
   - Persistent Configuration Storage
   - RESTful API Endpoints
 
-## 🔄 Scalability
+## Scalability 🔄
 
 This system is highly scalable and can be easily modified to control more or fewer relays:
 
@@ -224,7 +246,7 @@ This system is highly scalable and can be easily modified to control more or few
 > 2. JavaScript relay array
 > 3. HTML interface elements
 
-## 🔧 Hardware Requirements
+## Hardware Requirements 🔧
 
 - ESP8266 12-E NodeMCU Development Board (or any compatible ESP8266 module)
 - 2-Channel Relay Module
@@ -248,7 +270,7 @@ This system is highly scalable and can be easily modified to control more or few
 
 The above schematic shows the connections between the ESP8266, RTC module, and relay module. Make sure to follow the pin connections exactly as shown for proper functionality.
 
-## 🕒 NTP Time Offset and Server Selection
+## NTP Time Offset and Server Selection 🕒
 
 Previously, the NTP time offset and server were set manually in the code using a line such as:
 ```cpp
@@ -269,7 +291,7 @@ NTPClient timeClient(ntpUDP, "in.pool.ntp.org", 19800);
 
 This makes the system more flexible and user-friendly, allowing for easy adjustments without modifying the code.
 
-## 📦 Dependencies
+## Dependencies 📦
 
 > ⚠️ **Important**: The following specific libraries are required for compatibility. Using different versions may cause stability issues.
 
@@ -285,7 +307,7 @@ This makes the system more flexible and user-friendly, allowing for easy adjustm
 
 All libraries can be installed through the Arduino Library Manager. These specific libraries are mandatory for proper functionality of the ElegantOTA system.
 
-## 🚀 Installation
+## Installation 🚀
 > **🛠️ CH340 Driver Troubleshooting**
 >
 > <span style="color:red; font-weight:bold;">Some ESP8266 modules use the CH340 USB-to-serial chip, which may occasionally cause upload problems.</span>
@@ -371,7 +393,7 @@ You can upload these files directly using the ElegantOTA web interface:
 > - Reconfigure any other custom settings
 > This only applies to filesystem updates, not firmware updates.
 
-## 🗄️ Backup and Restore
+## Backup and Restore 🗄️
 
 The system provides a simple backup and restore feature for your convenience:
 
@@ -387,7 +409,7 @@ This makes it easy to recover your setup after updates or hardware changes, ensu
 
 > 💡 **Tip**: After the initial wired upload, all future updates can be done wirelessly through ElegantOTA. This includes both code and filesystem updates. Just make sure to have backup.
 
-## ⚠️ Important Troubleshooting
+## Important Troubleshooting ⚠️
 
 > 🔴 **Critical**: If the server fails to start or the code doesn't work, the most common cause is incorrect static IP configuration. You have two options:
 > 1. **Remove Static IP**: Comment out or remove the static IP configuration code to use DHCP (recommended for beginners)
@@ -403,7 +425,7 @@ This makes it easy to recover your setup after updates or hardware changes, ensu
 >
 > Now, after the device restarts and you log in with the new IP, you'll notice that the fields below WiFi name and password (subnet, gateway, etc.) are all filled in automatically. Just check the "Use custom static IP" option and click on "Make this static IP." The device will reboot, and from then on, you can always use this IP address to access your Smart Aquarium—no network knowledge required!
 
-## 🌐 Web Interface
+## Web Interface 🌐
 
 The system provides a modern, fully responsive web interface optimized for both desktop and mobile devices:
 
@@ -432,7 +454,7 @@ The system provides a modern, fully responsive web interface optimized for both 
   - Auto-refreshes every 5 seconds.
   - Shows connection status and firmware version.
 
-## 🔌 API Endpoints
+## API Endpoints 🔌
 
 The system exposes several RESTful API endpoints:
 
@@ -459,11 +481,11 @@ The system exposes several RESTful API endpoints:
 
 These endpoints allow full configuration and control of the system via the web interface or external tools.
 
-## 🎯 Contributing
+## Contributing 🎯
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📜 License
+## License 📜
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 
@@ -477,7 +499,7 @@ Key points of GPL v3:
 
 For complete license terms, see the [full GPL v3 text](https://www.gnu.org/licenses/gpl-3.0.txt).
 
-## 🙏 Acknowledgments
+## Acknowledgments 🙏
 
 - Arduino Community
 - ESP8266 Development Team
