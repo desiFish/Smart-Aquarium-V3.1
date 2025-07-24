@@ -93,7 +93,7 @@ The onboard RGB LED provides visual feedback for key system states and errors:
 
 These LED patterns help you quickly identify the system status and troubleshoot issues. For details on each color and pattern, refer to the firmware code comments.
 
-## �️ Errors & Alerts via Web Interface
+## Errors & Alerts via Web Interface 🖥️
 
 In addition to audible beep codes and LED color indications, the Smart Aquarium V3.1 system provides error and alert notifications directly through the web interface:
 
