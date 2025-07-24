@@ -501,10 +501,12 @@ For complete license terms, see the [full GPL v3 text](https://www.gnu.org/licen
 
 ## Acknowledgments 🙏
 
-- Arduino Community
-- ESP8266 Development Team
-- ElegantOTA Library
-- ESPAsyncWebServer Contributors
+ - Arduino Community
+ - ESP8266 Development Team
+ - Adafruit Team
+ - ElegantOTA Library
+ - ESPAsyncWebServer Contributors
+ - All other open source contributors and library authors
 
 ---
 
