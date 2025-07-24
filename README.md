@@ -392,7 +392,7 @@ You can upload these files directly using the ElegantOTA web interface:
 > - Reconfigure any other custom settings
 > This only applies to filesystem updates, not firmware updates.
 
-## Backup and Restore 🗄️
+## Backup and Restore
 
 The system provides a simple backup and restore feature for your convenience:
 
