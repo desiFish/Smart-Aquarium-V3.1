@@ -21,7 +21,7 @@ An advanced, ESP8266-based interactive aquarium control system with a modern web
 - [Safety Disclaimer ⚠️](#safety-disclaimer-️)
 - [Beep Codes Reference Table 🔔](#beep-codes-reference-table-)
 - [LED Color Codes & Status Indications 💡](#led-color-codes--status-indications-)
- - [Errors & Alerts via Web Interface](#errors--alerts-via-web-interface-) 🖥️
+ - [Errors & Alerts via Web Interface](#-errors--alerts-via-web-interface-) 🖥️
 - [Gallery 📸](#gallery-)
 - [RTC Support (DS1307/DS3231) 🕒](#rtc-support-ds1307ds3231-)
 - [Features 🌟](#features-)
