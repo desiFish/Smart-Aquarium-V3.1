@@ -21,6 +21,7 @@ An advanced, ESP8266-based interactive aquarium control system with a modern web
 - [Safety Disclaimer ⚠️](#safety-disclaimer-️)
 - [Beep Codes Reference Table 🔔](#beep-codes-reference-table-)
 - [LED Color Codes & Status Indications 💡](#led-color-codes--status-indications-)
+- [Errors & Alerts via Web Interface](#errors--alerts-via-web-interface) 🖥️
 - [Gallery 📸](#gallery-)
 - [RTC Support (DS1307/DS3231) 🕒](#rtc-support-ds1307ds3231-)
 - [Features 🌟](#features-)
@@ -92,7 +93,7 @@ The onboard RGB LED provides visual feedback for key system states and errors:
 
 These LED patterns help you quickly identify the system status and troubleshoot issues. For details on each color and pattern, refer to the firmware code comments.
 
-## Errors & Alerts via Web Interface 🖥️
+## Errors & Alerts via Web Interface
 
 In addition to audible beep codes and LED color indications, the Smart Aquarium V3.1 system provides error and alert notifications directly through the web interface:
 
