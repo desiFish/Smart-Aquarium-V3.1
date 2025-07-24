@@ -181,7 +181,7 @@ These web-based alerts and error messages help you quickly identify and resolve 
 ## RTC Support (DS1307/DS3231) 🕒
 
 This project supports both **DS1307** and **DS3231** RTC modules for accurate timekeeping.  
-- By default, the code uses DS1307.  
+- By default, the code uses DS3231.  
 - To use DS3231, uncomment the relevant line in the code (`RTC_DS3231 rtc;`) and comment out the DS1307 line before uploading.
 - Both modules connect via I2C (SDA/SCL) to the ESP8266.
 - RTC time can be updated from the **Settings** page in the web interface.
