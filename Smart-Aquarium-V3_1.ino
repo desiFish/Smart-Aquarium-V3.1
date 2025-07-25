@@ -32,7 +32,7 @@
 #include <Adafruit_NeoPixel.h>
 
 // Software version
-#define SWVersion "v1.1.5"
+#define SWVersion "v1.1.6"
 
 // Number of leds
 #define NUMPIXELS 1
@@ -327,6 +327,60 @@ void onOTAEnd(bool success)
     pixels.show();
 }
 
+// --- Error message buffer for API ---
+String errorBuffer = "";
+
+/**
+ * @brief Updates static NTP time buffer (hour and minute) from NTP server as a fallback when RTC fails.
+ *
+ * This function fetches the current time from the configured NTP server and updates static buffer variables for hour and minute.
+ * It only performs an NTP update if at least 30 seconds have passed since the last update, to avoid excessive NTP requests.
+ * The function sets the global errorBuffer with a descriptive message on both success and failure.
+ *
+ * @param[out] hour   Reference to a byte variable that will be set to the current hour (0-23) from NTP.
+ * @param[out] minute Reference to a byte variable that will be set to the current minute (0-59) from NTP.
+ *
+ * @return true  If the time was successfully updated from NTP or a recent value is available.
+ * @return false If WiFi is not connected, NTP update fails, or the received time is invalid.
+ *
+ * @note Call this function in loop() to keep the fallback time updated. Use the reference parameters to access the static buffer values.
+ */
+bool updateNtpTimeBuffer(byte &hour, byte &minute)
+{
+    static byte ntpHour = 0;
+    static byte ntpMinute = 0;
+    static unsigned long lastNtpUpdate = 0;
+    unsigned long nowMs = millis();
+    if (nowMs - lastNtpUpdate < 30000)
+    {
+        hour = ntpHour;
+        minute = ntpMinute;
+        return true; // No update needed, return last known good values
+    }
+    lastNtpUpdate = nowMs;
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        errorBuffer = "[NTP Fallback] WiFi not connected. Cannot update time from NTP.";
+        return false;
+    }
+    if (!(timeClient.update() && timeClient.isTimeSet()))
+    {
+        errorBuffer = "[NTP Fallback] NTP update failed or time not set.";
+        return false;
+    }
+    time_t rawtime = timeClient.getEpochTime();
+    if (rawtime <= 1000000000UL)
+    {
+        errorBuffer = "[NTP Fallback] Invalid epoch time from NTP.";
+        return false;
+    }
+    ntpHour = (byte)((rawtime % 86400UL) / 3600UL);
+    ntpMinute = (byte)((rawtime % 3600UL) / 60UL);
+    hour = ntpHour;
+    minute = ntpMinute;
+    return true;
+}
+
 // ESP8266 gpio pins for relays
 const byte RELAY_PINS[] = {0, 12, 13, 14};
 const byte NUM_RELAYS = 4;
@@ -498,12 +552,28 @@ public:
 
     bool shouldBeOnNow()
     {
-        if (!rtc.begin())
-            return false;
+        byte hr = 0, min = 0;
+        if (rtc.begin())
+        {
+            DateTime now = rtc.now();
+            hr = now.hour();
+            min = now.minute();
+        }
+        else
+        {
+            // RTC failed, try NTP fallback
+            if (!updateNtpTimeBuffer(hr, min))
+            {
+                // NTP fallback also failed
+                errorBuffer = "RTC and NTP fallback failed. Cannot determine time.";
+                return false;
+            }
+            errorBuffer = "RTC not found, using NTP time.";
+        }
 
-        DateTime now = rtc.now();
-        int timeNow = now.hour() * 100 + now.minute();
+        int timeNow = hr * 100 + min;
 
+        // Common comparison logic
         if (offTime > onTime)
         {
             return timeNow >= onTime && timeNow < offTime;
@@ -759,9 +829,6 @@ bool ensureConfigDirectory()
 }
 
 volatile bool shouldReboot = false;
-
-// --- Error message buffer for API ---
-String errorBuffer = "";
 
 /* Error code for persistent alert signaling
 0 = no error, 1 = FS mount, 2 = config dir, 3 = RTC*/
