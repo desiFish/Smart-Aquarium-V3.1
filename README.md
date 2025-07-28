@@ -83,7 +83,7 @@ The onboard RGB LED provides visual feedback for key system states and errors:
 |-------------------------------------|-----------------------------|----------------------------------------------|
 | Normal operation (idle/ready)       | Green flash (every 2s)      | System running normally                      |
 | WiFi connecting                     | White blink                 | Attempting WiFi connection                   |
-| WiFi/AP mode active                 | Blue                        | Device in AP mode for setup                  |
+| WiFi/AP mode active                 | Blue                        | Device in AP mode for | Blue (blinks after boot if WiFi fails) | If normal WiFi connection fails during boot, the white LED will blink while trying to connect to saved configuration. If it cannot connect, the blue LED will blink to indicate AP mode is activated for setup. |
 | Filesystem/Config/RTC error         | Solid Red                   | Critical error (see beep codes above)        |
 | OTA update started                  | Bright Red                  | OTA update in progress (start)               |
 | OTA update progress                 | Blue blink                  | OTA update progress (alternating blue/black) |
