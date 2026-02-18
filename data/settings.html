@@ -109,6 +109,17 @@
             color: #555;
         }
 
+        .version-footer a {
+            color: #2196F3;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .version-footer a:hover {
+            color: #64B5F6;
+            text-decoration: underline;
+        }
+
         .navbar {
             width: 100%;
             max-width: 600px;
@@ -480,7 +491,8 @@
 
     <footer class="version-footer">
         <span id="versionInfo">Checking version...</span>
-        <span class="copyright">&copy; 2025 desiFish. All rights reserved.</span>
+        <span class="copyright">&copy; 2025 <a href="https://github.com/desiFish" target="_blank">desiFish</a> |
+            Licensed under <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GPL-3.0</a></span>
     </footer>
 
     <div id="restoreOverlay" style="display:none">
