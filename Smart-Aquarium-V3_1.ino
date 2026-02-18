@@ -21,6 +21,7 @@
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
+#include <ArduinoJson.hpp>
 #include <Wire.h>
 #include <ElegantOTA.h>
 
@@ -32,7 +33,7 @@
 #include <Adafruit_NeoPixel.h>
 
 // Software version
-#define SWVersion "v1.1.6"
+#define SWVersion "v1.1.7"
 
 // Number of leds
 #define NUMPIXELS 1
@@ -807,6 +808,10 @@ unsigned long previousMillis = 0;
 const long interval = 1000;
 bool updateTime = false;
 
+// --- Time update tracking variables ---
+bool timeNeedsUpdate = true;
+byte lastCheckedDay = 0;
+
 // Forward declarations
 void setupServer();
 bool rtcTimeUpdater();
@@ -849,6 +854,68 @@ void writeRtcUpdateFlag(bool flag)
         uint8_t val = flag ? 0x01 : 0x00;
         f.write(&val, 1);
         f.close();
+    }
+}
+
+/**
+ * @brief Saves time update tracking (timeNeedsUpdate flag and lastCheckedDay) to LittleFS.
+ *
+ * Serializes time update tracking data to /time_tracking.json in LittleFS.
+ * Used to persist the 15-day periodic update tracking across reboots.
+ */
+void saveTimeUpdateTrackingToFS()
+{
+    JsonDocument doc;
+    doc["timeNeedsUpdate"] = timeNeedsUpdate;
+    doc["lastCheckedDay"] = lastCheckedDay;
+    File f = LittleFS.open("/time_tracking.json", "w");
+    if (f)
+    {
+        serializeJson(doc, f);
+        f.close();
+        Serial.println("[DEBUG] Time tracking saved to FS");
+    }
+    else
+    {
+        Serial.println("[DEBUG] Failed to open /time_tracking.json for writing");
+    }
+}
+
+/**
+ * @brief Loads time update tracking (timeNeedsUpdate flag and lastCheckedDay) from LittleFS.
+ *
+ * Reads and deserializes /time_tracking.json from LittleFS.
+ * Uses default values (timeNeedsUpdate=true, lastCheckedDay=0) if the file is missing or corrupt.
+ */
+void loadTimeUpdateTrackingFromFS()
+{
+    Serial.println("[DEBUG] loadTimeUpdateTrackingFromFS called");
+    if (!LittleFS.exists("/time_tracking.json"))
+    {
+        Serial.println("[DEBUG] /time_tracking.json not found, using defaults");
+        timeNeedsUpdate = true;
+        lastCheckedDay = 0;
+        return;
+    }
+    File f = LittleFS.open("/time_tracking.json", "r");
+    if (!f)
+    {
+        Serial.println("[DEBUG] Failed to open /time_tracking.json");
+        return;
+    }
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, f);
+    f.close();
+    if (!err)
+    {
+        Serial.println("[DEBUG] Time tracking loaded from JSON");
+        timeNeedsUpdate = doc["timeNeedsUpdate"] | true;
+        lastCheckedDay = doc["lastCheckedDay"] | 0;
+    }
+    else
+    {
+        Serial.print("[DEBUG] Time tracking JSON error: ");
+        Serial.println(err.c_str());
     }
 }
 
@@ -1048,6 +1115,51 @@ void setup()
         errorBuffer = "RTC not found. Please check hardware connection.";
         errorCode = 3; // RTC error
     }
+    else
+    {
+        // Load time update tracking from filesystem
+        loadTimeUpdateTrackingFromFS();
+
+        // Get current RTC time
+        DateTime now = rtc.now();
+
+        // Check if RTC is not initialized (year = 1970) or RTC battery lost power
+        if (now.year() == 1970 || rtc.lostPower())
+        {
+            Serial.println("[DEBUG] RTC not initialized or lost power, marking for update");
+            timeNeedsUpdate = true;
+        }
+
+        // Get current day
+        byte currentDay = now.day();
+
+        // Calculate days passed since last check
+        byte daysPassed = (currentDay - lastCheckedDay + 31) % 31;
+
+        // Check if update is needed: timeNeedsUpdate flag OR 15+ days passed
+        if (timeNeedsUpdate || daysPassed >= 15)
+        {
+            Serial.println("[INFO] Time update needed - attempting NTP sync");
+            if (rtcTimeUpdater())
+            {
+                Serial.println("[INFO] RTC time synchronized successfully");
+                timeNeedsUpdate = false;
+                errorBuffer = "[SUCCESS] RTC time synchronized from NTP successfully.";
+            }
+            else
+            {
+                Serial.println("[WARN] RTC time sync failed, will retry later");
+            }
+            // Update lastCheckedDay regardless of success (to avoid constant attempts)
+            lastCheckedDay = currentDay;
+            saveTimeUpdateTrackingToFS();
+        }
+        else
+        {
+            Serial.println("[INFO] Time already updated, no action needed");
+            errorBuffer = "[INFO] RTC time check: already synchronized, next check in 15 days.";
+        }
+    }
 
     // Initialize relay objects
     for (byte i = 0; i < NUM_RELAYS; i++)
@@ -1215,58 +1327,119 @@ void loop()
  */
 bool rtcTimeUpdater()
 {
+    String debugLog = "";
+
     if (!rtc.begin())
     {
-        Serial.println("[DEBUG] RTC not found in rtcTimeUpdater");
-        errorBuffer = "RTC not found. Please check hardware connection.";
+        Serial.println("[ERROR] RTC not found - cannot update time");
+        errorBuffer = "[RTC_ERROR] RTC hardware not found. Check DS3231 connection.";
+        return false;
     }
-    if (WiFi.status() == WL_CONNECTED)
+
+    // Early WiFi validation - check connection status first (WL_CONNECTED = 3)
+    int wifiStatus = WiFi.status();
+    if (wifiStatus != WL_CONNECTED)
     {
-        if (ntpServer.length() == 0)
-        {
-            ntpServer = "pool.ntp.org";
-            Serial.println("[WARN] NTP server string was empty, set to default");
-        }
-        Serial.print("[DEBUG] NTP server: ");
-        Serial.println(ntpServer);
+        char buffer[100];
+        sprintf(buffer, "[WIFI_ERROR] WiFi not connected. Status: %d (need 3). IP: %s", wifiStatus, WiFi.localIP().toString().c_str());
+        errorBuffer = buffer;
+        Serial.println(errorBuffer);
+        return false;
+    }
 
-        if (!timeClient.isTimeSet())
-        {
-            Serial.println("[DEBUG] NTP time not set, attempting update");
-        }
-        bool updated = false;
+    // Set default NTP server if empty
+    if (ntpServer.length() == 0)
+    {
+        ntpServer = "pool.ntp.org";
+    }
 
-        if (WiFi.status() == WL_CONNECTED && ntpServer.length() > 0)
+    // Array of fallback NTP servers to try
+    const char *ntpServers[] = {"pool.ntp.org", "time.nist.gov", "time.cloudflare.com"};
+    int numServers = 3;
+    bool updated = false;
+    String lastError = "";
+
+    for (int attempt = 0; attempt < numServers && !updated; attempt++)
+    {
+        String currentServer = (attempt == 0) ? ntpServer : String(ntpServers[attempt]);
+        char attemptLog[150];
+        sprintf(attemptLog, "[NTP_ATTEMPT_%d] Trying server: %s | TZ offset: %d sec", attempt + 1, currentServer.c_str(), timezoneOffset);
+        debugLog += attemptLog;
+        debugLog += " | ";
+        Serial.println(attemptLog);
+
+        // Recreate NTPClient with current server (CRITICAL for each attempt)
+        timeClient = NTPClient(ntpUDP, currentServer.c_str(), timezoneOffset);
+        timeClient.begin();
+        delay(300); // Extended delay for UDP + DNS
+
+        // Attempt NTP update with retries
+        for (int retry = 0; retry < 3 && !updated; retry++)
         {
-            updated = timeClient.update();
-        }
-        if (updated && timeClient.isTimeSet())
-        {
-            time_t rawtime = timeClient.getEpochTime();
-            if (rawtime < 1000000000UL) // sanity check for valid epoch (after 2001)
+            if (retry > 0)
             {
-                Serial.println("[ERROR] Invalid epoch time from NTP");
-                errorBuffer = "Invalid epoch time from NTP. Time sync failed.";
-                return false;
+                delay(800);
             }
-            DateTime dt(rawtime);
-            rtc.adjust(dt);
-            return true;
-        }
-        else
-        {
-            Serial.println("[ERROR] NTP update failed or time not set");
-            errorBuffer = "NTP update failed or time not set. Check internet connection and NTP server.";
-        }
-    }
-    else
-    {
-        Serial.println("[ERROR] WiFi not connected in rtcTimeUpdater");
-        errorBuffer = "WiFi not connected. Cannot update time from NTP.";
-    }
-    return false;
-}
 
+            updated = timeClient.update();
+
+            char retryLog[120];
+            if (updated)
+            {
+                sprintf(retryLog, "[SUCCESS] Update returned true on %s (retry %d)", currentServer.c_str(), retry);
+                Serial.println(retryLog);
+                debugLog += retryLog;
+                break;
+            }
+            else
+            {
+                sprintf(retryLog, "[RETRY_%d_FAIL] %s returned false", retry + 1, currentServer.c_str());
+                Serial.println(retryLog);
+                lastError = retryLog;
+            }
+        }
+    }
+
+    if (!updated)
+    {
+        char finalError[180];
+        sprintf(finalError, "[NTP_FAILED] All %d servers failed. WiFi status: %d. Last attempt: %s",
+                numServers, WiFi.status(), lastError.c_str());
+        errorBuffer = finalError;
+        Serial.println(finalError);
+        return false;
+    }
+
+    // Check if time is actually set
+    if (!timeClient.isTimeSet())
+    {
+        errorBuffer = "[TIME_NOT_SET] NTP sync returned success but time not set in client.";
+        Serial.println(errorBuffer);
+        return false;
+    }
+
+    // Validate epoch time
+    time_t rawtime = timeClient.getEpochTime();
+    if (rawtime < 1000000000UL)
+    {
+        char epochError[130];
+        sprintf(epochError, "[EPOCH_ERROR] Invalid NTP epoch: %ld (min: 1000000000). Year check failed.", rawtime);
+        errorBuffer = epochError;
+        Serial.println(epochError);
+        return false;
+    }
+
+    // Update RTC with validated time
+    DateTime dt(rawtime);
+    rtc.adjust(dt);
+
+    char successMsg[150];
+    sprintf(successMsg, "[SUCCESS] RTC synced to: %04d-%02d-%02d %02d:%02d:%02d",
+            dt.year(), dt.month(), dt.day(), dt.hour(), dt.minute(), dt.second());
+    errorBuffer = successMsg;
+    Serial.println(successMsg);
+    return true;
+}
 /**
  * @brief Sets up the HTTP server and API endpoints.
  *
@@ -1396,11 +1569,14 @@ void setupServer()
                 ntpServer = newNtpServer;
                 timezoneOffset = newOffset;
                 timezoneString = newTimezone;
+                // IMPORTANT: Recreate NTPClient with new server address
+                Serial.printf("[DEBUG] Recreating NTPClient with new server: %s, offset: %d\n", ntpServer.c_str(), timezoneOffset);
+                timeClient = NTPClient(ntpUDP, ntpServer.c_str(), timezoneOffset);
                 // Save to FS
                 saveNtpConfigToFS();
                 writeRtcUpdateFlag(true); // Set flag for RTC update after reboot
                 Serial.println("[DEBUG] NTP config updated, scheduling reboot");
-                request->send(200, "application/json", "{\"success\":true,\"info\":\"Rebooting to apply NTP config...\"}");
+                request->send(200, "application/json", "{\"success\":true,\"info\":\"Rebooting to apply NTP config...\"}");;
             } else {
                 request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid data\"}");
             } });

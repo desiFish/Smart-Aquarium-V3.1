@@ -1202,7 +1202,7 @@
                     const data = await resp.json();
                     const msg = (data && data.error) ? String(data.error).trim() : "";
                     if (msg && msg !== lastErrorMsg) {
-                        alert("Device Error:\n\n" + msg);
+                        alert("Device Msg:\n" + msg);
                         lastErrorMsg = msg;
                     } else if (!msg) {
                         lastErrorMsg = "";
