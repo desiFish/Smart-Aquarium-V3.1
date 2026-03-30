@@ -307,6 +307,7 @@ This makes the system more flexible and user-friendly, allowing for easy adjustm
 - [ESPAsyncTCP](https://github.com/ESP32Async/ESPAsyncTCP) - **Required Latest Version**
 - [ESPAsyncWebServer](https://github.com/ESP32Async/ESPAsyncWebServer) - **Required Latest Version**
 - LittleFS (Built-in with ESP8266 Arduino Core)
+- ESP8266mDNS (Built-in with ESP8266 Arduino Core)
 - ArduinoJson
 - [RTClib](https://github.com/adafruit/RTClib) - **Required Latest Version**
 - ElegantOTA
@@ -433,7 +434,7 @@ To reset the device to factory defaults:
   - Device settings
 - **After Reset:** Device reboots and starts in AP mode (`Aquarium-Setup`) with default settings for reconfiguration
 
-**Example of cleared wifi.json file:**
+**Example of cleared backup.json file:**
 ```json
 {
   "generatedAt": "2026-03-30T07:00:05.236Z",
