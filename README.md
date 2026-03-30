@@ -33,6 +33,7 @@ An advanced, ESP8266-based interactive aquarium control system with a modern web
 - [Backup and Restore](#backup-and-restore) 🗄️
 - [Important Troubleshooting ⚠️](#important-troubleshooting-️)
 - [Web Interface 🌐](#web-interface-)
+- [Accessing the Device 🔗](#accessing-the-device-)
 - [API Endpoints 🔌](#api-endpoints-)
 - [Contributing 🎯](#contributing-)
 - [License 📜](#license-)
@@ -84,6 +85,9 @@ The onboard RGB LED provides visual feedback for key system states and errors:
 | Normal operation (idle/ready)       | Green flash (every 2s)      | System running normally                      |
 | WiFi connecting                     | White blink                 | Attempting WiFi connection                   |
 | WiFi/AP mode active                 | Blue (blinks after boot if WiFi fails) | If normal WiFi connection fails during boot, the white LED will blink while trying to connect to saved configuration. If it cannot connect, the blue LED will blink to indicate AP mode is activated for setup. |
+| Static IP configuration failed      | Red blinking (fast, 6x)     | Static IP settings are invalid or incompatible with network. Check IP/gateway/subnet configuration. |
+| AP fallback mode (no WiFi)          | Blue/Red alternating        | Device entering AP mode due to WiFi connection failure. Blue/Red blinking for 4 cycles indicates AP is starting. |
+| STA timeout in AP mode              | Orange/Red blinking (3x)    | Background STA connection attempt timed out. Device will continue in AP mode for configuration. |
 | Filesystem/Config/RTC error         | Solid Red                   | Critical error (see beep codes above)        |
 | OTA update started                  | Bright Red                  | OTA update in progress (start)               |
 | OTA update progress                 | Blue blink                  | OTA update progress (alternating blue/black) |
@@ -219,6 +223,10 @@ This project supports both **DS1307** and **DS3231** RTC modules for accurate ti
   - LittleFS File System
   - Persistent Configuration Storage
   - RESTful API Endpoints
+  - mDNS hostname resolution (`aquarium.local`)
+  - Dual WiFi Mode (AP + STA) for robust connectivity
+  - Factory Reset functionality
+  - Enhanced error detection and LED feedback
 
 ## Scalability 🔄
 
@@ -409,6 +417,47 @@ This makes it easy to recover your setup after updates or hardware changes, ensu
 
 > 💡 **Tip**: After the initial wired upload, all future updates can be done wirelessly through ElegantOTA. This includes both code and filesystem updates. Just make sure to have backup.
 
+### Factory Reset
+
+⚠️ **WARNING:** The factory reset function will clear all configuration data. Use with caution!
+
+To reset the device to factory defaults:
+
+- **Access:** Settings page → Click "Reset to Defaults" button (red button)
+- **Confirmation:** A confirmation dialog appears to prevent accidental resets
+- **What Gets Reset:**
+  - WiFi settings (SSID and password)
+  - NTP/Timezone configuration
+  - Relay names and settings
+  - All schedules and timers
+  - Device settings
+- **After Reset:** Device reboots and starts in AP mode (`Aquarium-Setup`) with default settings for reconfiguration
+
+**Example of cleared wifi.json file:**
+```json
+{
+  "generatedAt": "2026-03-30T07:00:05.236Z",
+  "wifi": {
+    "ssid": "",
+    "password": "",
+    "ip": "",
+    "gateway": "",
+    "subnet": "",
+    "dns1": "",
+    "dns2": "",
+    "useStaticIp": false
+  },
+  "ntp": {
+    "ntpServer": "in.pool.ntp.org",
+    "timezoneOffset": 19800,
+    "timezoneString": "+5:30"
+  },
+... (rest data)
+}
+```
+
+> 💡 **Additional Tip:** It's also recommended to create a backup before attempting a factory reset, just in case you want to restore your previous settings later. (Make sure to open the backup file and manually remove the netwrok details, else old nework details will be loaded)
+
 ## Important Troubleshooting ⚠️
 
 > 🔴 **Critical**: If the server fails to start or the code doesn't work, the most common cause is incorrect static IP configuration. You have two options:
@@ -444,6 +493,7 @@ The system provides a modern, fully responsive web interface optimized for both 
   - Update RTC time from NTP
   - Backup and restore configuration
   - View current time, date, and day of week
+  - **Factory Reset Button** - Reset device to factory defaults (clears WiFi, NTP, and relay settings)
   - Mobile-optimized Input Fields
   - Easy Touch Navigation
   - Responsive Time Controls
@@ -453,6 +503,26 @@ The system provides a modern, fully responsive web interface optimized for both 
   - Displays detailed hardware information such as chip ID, flash size, CPU frequency, WiFi signal strength, and more.
   - Auto-refreshes every 5 seconds.
   - Shows connection status and firmware version.
+
+## Accessing the Device 🔗
+
+The device can be accessed through multiple methods:
+
+### Via mDNS Hostname (Recommended)
+- **URL:** `http://aquarium.local`
+- Works in both WiFi (STA) and AP mode
+- No need to find the IP address—simply use the hostname
+- Requires mDNS support on your device/network (most modern devices support it)
+
+### Via IP Address
+- **WiFi Mode (STA):** Use the device's assigned IP address 
+  - Check your router's device list or the Hardware Info page in the web interface
+  - Device will display IP on serial monitor during boot
+- **AP Mode:** Access at `http://192.168.4.1`
+  - SSID: `Aquarium-Setup`
+  - Password: `12345678`
+
+> 💡 **Tip:** For the easiest experience, use `http://aquarium.local` once the device boots up. If your network doesn't support mDNS, fall back to using the IP address method.
 
 ## API Endpoints 🔌
 
@@ -465,6 +535,7 @@ The system exposes several RESTful API endpoints:
 - `/api/wifi` (GET/POST) - Get or update WiFi and network settings
 - `/api/ntp` (GET/POST) - Get or update NTP server and timezone settings
 - `/api/reboot` (POST) - Reboot the device
+- `/api/reset` (POST) - Reset device to factory defaults (clears all configuration)
 - `/api/time/update` (POST) - Trigger RTC time update from NTP
 - `/api/error` (GET) - Get the latest error message (clears after reading)
 - `/api/system/details` (GET) - Get ESP8266 system and hardware details

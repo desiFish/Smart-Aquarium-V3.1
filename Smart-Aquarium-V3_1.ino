@@ -31,9 +31,11 @@
 #include "RTClib.h"
 // RGB LED control
 #include <Adafruit_NeoPixel.h>
+// mDNS for hostname resolution
+#include <ESP8266mDNS.h>
 
 // Software version
-#define SWVersion "v1.1.7"
+#define SWVersion "v1.2.0"
 
 // Number of leds
 #define NUMPIXELS 1
@@ -968,6 +970,18 @@ void setup()
         errorCode = 1; // Filesystem mount error
     }
 
+    /* Debug: List all files in LittleFS
+    Serial.println("\n[DEBUG] Files in LittleFS:");
+    Dir dir = LittleFS.openDir("/");
+    while (dir.next())
+    {
+        Serial.print("[DEBUG] File: ");
+        Serial.print(dir.fileName());
+        Serial.print(" - Size: ");
+        Serial.println(dir.fileSize());
+    }
+    Serial.println("[DEBUG] End of file list\n");*/
+
     // Ensure config directory exists
     if (!LittleFS.exists("/config"))
     {
@@ -1030,8 +1044,17 @@ void setup()
         {
             // Mark as not configured so AP mode is started
             wifiConfigured = false;
-            pixels.setPixelColor(0, pixels.Color(0, 0, 150));
-            pixels.show();
+            // LED pattern: Fast red blinking (500ms on/off) - indicates static IP failure
+            Serial.println("[LED] Fast red blinking - Static IP configuration failed");
+            for (int i = 0; i < 6; i++)
+            {
+                pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+                pixels.show();
+                delay(250);
+                pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+                pixels.show();
+                delay(250);
+            }
         }
         else
         {
@@ -1039,8 +1062,9 @@ void setup()
             WiFi.begin(wifiSsid.c_str(), wifiPassword.c_str());
             Serial.printf("Connecting to WiFi SSID: %s\n", wifiSsid.c_str());
             unsigned long startAttemptTime = millis();
-            // Show progress on the LED
-            while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 20000)
+            const unsigned long timeoutMs = 15000; // Reduced timeout for faster fallback detection
+
+            while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < timeoutMs)
             {
                 pixels.setPixelColor(0, pixels.Color(150, 150, 150));
                 pixels.show();
@@ -1049,6 +1073,14 @@ void setup()
                 pixels.setPixelColor(0, pixels.Color(0, 0, 0));
                 pixels.show();
                 delay(250);
+
+                // Watchdog timeout detection: if connection hangs, break early
+                if (millis() - startAttemptTime > 8000 && WiFi.status() == WL_DISCONNECTED)
+                {
+                    Serial.println("\n[TIMEOUT] WiFi connect appears to be hanging. Auto-switching to AP mode...");
+                    wifiConfigured = false;
+                    break;
+                }
             }
             if (WiFi.status() == WL_CONNECTED)
             {
@@ -1057,7 +1089,10 @@ void setup()
             }
             else
             {
-                Serial.println("\nWiFi connection failed, switching to AP mode");
+                Serial.println("\nWiFi connection failed with static IP. This may occur if:");
+                Serial.println("- The configured static IP is not on the current network");
+                Serial.println("- The ISP/router configuration changed");
+                Serial.println("Switching to dual mode (AP + STA) to allow configuration via AP.");
                 wifiConfigured = false;
             }
         }
@@ -1066,27 +1101,44 @@ void setup()
     // ensure AP mode if WiFi is not connected
     if (!wifiConfigured || WiFi.status() != WL_CONNECTED)
     {
+        // LED pattern: Alternating blue/red - indicates AP fallback mode
+        Serial.println("[LED] Alternating blue/red - Entering AP fallback mode");
+        for (int i = 0; i < 4; i++)
+        {
+            pixels.setPixelColor(0, pixels.Color(0, 0, 200));
+            pixels.show();
+            delay(200);
+            pixels.setPixelColor(0, pixels.Color(200, 0, 100));
+            pixels.show();
+            delay(200);
+        }
         pixels.setPixelColor(0, pixels.Color(0, 0, 150));
         pixels.show();
-        // Start in AP mode for configuration
-        WiFi.mode(WIFI_AP);
+
+        // Use dual mode (AP + STA) for robustness - especially when static IP fails
+        // This ensures AP is always available for configuration while still attempting STA connection
+        WiFi.mode(WIFI_AP_STA);
         String apSsid = "Aquarium-Setup";
         String apPassword = "12345678";
         WiFi.softAP(apSsid.c_str(), apPassword.c_str());
         IPAddress apIP = WiFi.softAPIP();
-        Serial.print("Started AP mode. Connect to WiFi SSID: ");
+        Serial.print("Started AP mode (WIFI_AP_STA). Connect to WiFi SSID: ");
         Serial.println(apSsid);
         Serial.print("AP IP address: ");
         Serial.println(apIP);
         Serial.println("Use the web interface to configure WiFi.");
+        Serial.println("[LED INDICATOR] Slow blue blinking = No WiFi configured or connection failed");
 
-        // Optionally, try to connect to any pre-configured WiFi (if present)
+        // Attempt to connect to any pre-configured WiFi in the background (STA mode)
         if (wifiSsid.length() > 0)
         {
             WiFi.begin(wifiSsid.c_str(), wifiPassword.c_str());
-            Serial.printf("Attempting STA connection to SSID: %s\n", wifiSsid.c_str());
+            Serial.printf("Attempting STA connection to SSID: %s in background\n", wifiSsid.c_str());
             unsigned long startAttemptTime = millis();
-            while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 10000)
+            const unsigned long staTimeoutMs = 12000; // Timeout for background STA connection attempt
+            bool staTimedOut = false;
+
+            while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < staTimeoutMs)
             {
                 pixels.setPixelColor(0, pixels.Color(0, 0, 150));
                 pixels.show();
@@ -1095,16 +1147,43 @@ void setup()
                 pixels.setPixelColor(0, pixels.Color(0, 0, 0));
                 pixels.show();
                 delay(250);
+
+                // Timeout detection for STA hang - break early and show LED indicator
+                if (millis() - startAttemptTime > staTimeoutMs - 1000)
+                {
+                    staTimedOut = true;
+                    Serial.println("\n[TIMEOUT] STA connection timeout detected! Breaking loop early.");
+                    // LED indicator: Red/Orange blinking - timeout condition
+                    for (int i = 0; i < 3; i++)
+                    {
+                        pixels.setPixelColor(0, pixels.Color(255, 100, 0));
+                        pixels.show();
+                        delay(150);
+                        pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+                        pixels.show();
+                        delay(150);
+                    }
+                    pixels.setPixelColor(0, pixels.Color(0, 0, 150)); // Back to blue
+                    pixels.show();
+                    break; // Exit loop immediately
+                }
             }
+
             if (WiFi.status() == WL_CONNECTED)
             {
-                Serial.println("\nSTA connected in AP mode.");
+                Serial.println("\nSTA connected successfully!");
                 Serial.print("STA IP address: ");
                 Serial.println(WiFi.localIP());
             }
             else
             {
-                Serial.println("\nSTA not connected in AP mode.");
+                Serial.println("\nSTA connection failed or timed out. Continue with AP mode for configuration.");
+                Serial.println("[INFO] If WiFi credentials are invalid (e.g., static IP on different network),");
+                Serial.println("[INFO] connect to AP mode \"Aquarium-Setup\" and reset WiFi via web UI.");
+                if (staTimedOut)
+                {
+                    Serial.println("[TIMEOUT] STA connection attempt exceeded timeout - confirm WiFi is reachable.");
+                }
             }
         }
     }
@@ -1176,6 +1255,12 @@ void setup()
     setupServer();
     server.begin();
     Serial.println("HTTP server started");
+    // Initialize mDNS for AP mode
+    if (MDNS.begin("aquarium"))
+    {
+        Serial.println("[mDNS] Responder started. Access device at: aquarium.local");
+        MDNS.addService("http", "tcp", 80);
+    }
 
     // After all config loads, check RTC update flag
     if (readRtcUpdateFlag())
@@ -1199,6 +1284,7 @@ void setup()
 void loop()
 {
     ElegantOTA.loop();
+    MDNS.update();                          // Keep mDNS responder alive
     unsigned long currentMillis = millis(); // Update time if requested
 
     // Persistent error signaling if errorCode is set
@@ -1538,6 +1624,44 @@ void setupServer()
                   Serial.println("[DEBUG] /api/reboot endpoint called");
                   request->send(200, "application/json", "{\"success\":true,\"info\":\"Rebooting...\"}");
                   Serial.println("Rebooting ESP8266...");
+                  shouldReboot = true; // Set flag for reboot in loop()
+              });
+
+    // Reset LittleFS data endpoint
+    server.on("/api/reset", HTTP_POST, [](AsyncWebServerRequest *request)
+              {
+                  Serial.println("[DEBUG] /api/reset endpoint called");
+
+                  // Send response first
+                  request->send(200, "application/json", "{\"success\":true,\"info\":\"Resetting to factory defaults and rebooting...\"}");
+
+                  // Remove WiFi config
+                  if (LittleFS.exists("/wifi.json"))
+                  {
+                      LittleFS.remove("/wifi.json");
+                      Serial.println("[DEBUG] Removed /wifi.json");
+                  }
+
+                  // Remove NTP config
+                  if (LittleFS.exists("/ntp.json"))
+                  {
+                      LittleFS.remove("/ntp.json");
+                      Serial.println("[DEBUG] Removed /ntp.json");
+                  }
+
+                  // Remove relay configs
+                  for (byte i = 1; i <= 4; i++)
+                  {
+                      String relayFile = "/config/relay" + String(i) + ".json";
+                      if (LittleFS.exists(relayFile))
+                      {
+                          LittleFS.remove(relayFile);
+                          Serial.printf("[DEBUG] Removed %s\n", relayFile.c_str());
+                      }
+                  }
+
+                  Serial.println("[DEBUG] All LittleFS data cleared. Rebooting...");
+                  errorBuffer = "Device reset to factory defaults.";
                   shouldReboot = true; // Set flag for reboot in loop()
               });
 

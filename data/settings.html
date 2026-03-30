@@ -483,10 +483,14 @@
         <div id="ntpSaveStatus" style="margin-top:8px;font-size:0.9em;"></div>
     </div>
 
-    <div style="width:100%;max-width:600px;display:flex;justify-content:center;margin:18px auto 0 auto;">
+    <div
+        style="width:100%;max-width:600px;display:flex;justify-content:center;gap:10px;margin:18px auto 0 auto;flex-wrap:wrap;">
         <button class="btn-set"
             style="background:#1976D2;color:#fff;font-size:0.95em;padding:6px 18px;width:auto;min-width:120px;"
             onclick="window.location.href='specs.html'">Hardware Specs</button>
+        <button class="btn-set"
+            style="background:#d32f2f;color:#fff;font-size:0.95em;padding:6px 18px;width:auto;min-width:120px;"
+            onclick="showResetDialog()">Reset to Defaults</button>
     </div>
 
     <footer class="version-footer">
@@ -494,6 +498,31 @@
         <span class="copyright">&copy; 2025 <a href="https://github.com/desiFish" target="_blank">desiFish</a> |
             Licensed under <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GPL-3.0</a></span>
     </footer>
+
+    <!-- Reset Confirmation Modal -->
+    <div id="resetModal"
+        style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+        <div
+            style="background:#1e1e1e;border-radius:12px;padding:24px;max-width:400px;width:90%;box-shadow:0 4px 20px rgba(0,0,0,0.5);border:1px solid #333;">
+            <h2 style="color:#ff5252;margin:0 0 12px 0;font-size:1.4em;">Reset to Factory Defaults?</h2>
+            <p style="color:#ccc;margin:0 0 20px 0;line-height:1.5;">This will clear all settings and configure the
+                device. The following will be reset:</p>
+            <ul style="color:#aaa;margin:0 0 20px 0;padding-left:20px;line-height:1.6;">
+                <li><strong>WiFi Settings</strong> - WiFi SSID/Password cleared</li>
+                <li><strong>NTP/Timezone</strong> - Reset to in.pool.ntp.org, UTC+5:30</li>
+                <li><strong>Relay Settings</strong> - Reset to disabled, manual mode</li>
+            </ul>
+            <p style="color:#ff9999;margin:0 0 20px 0;font-size:0.9em;"><strong>After reset, the device will reboot
+                    and start in AP mode for setup.</strong></p>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button onclick="closeResetDialog()" class="btn-set"
+                    style="background:#555;color:#fff;padding:6px 16px;border:none;border-radius:4px;cursor:pointer;">Cancel</button>
+                <button onclick="confirmReset()" class="btn-set"
+                    style="background:#d32f2f;color:#fff;padding:6px 16px;border:none;border-radius:4px;cursor:pointer;">Yes,
+                    Reset</button>
+            </div>
+        </div>
+    </div>
 
     <div id="restoreOverlay" style="display:none">
         <div class="restore-spinner"></div>
@@ -1227,6 +1256,53 @@
             }
             pollError();
         })();
+
+        // Reset to factory defaults functions
+        function showResetDialog() {
+            const modal = document.getElementById('resetModal');
+            modal.style.display = 'flex';
+        }
+
+        function closeResetDialog() {
+            const modal = document.getElementById('resetModal');
+            modal.style.display = 'none';
+        }
+
+        function confirmReset() {
+            closeResetDialog();
+            const overlay = document.getElementById('restoreOverlay');
+            overlay.querySelector('.restore-message').textContent = 'Resetting to factory defaults... Please wait.';
+            overlay.style.display = 'flex';
+
+            fetch('/api/reset', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        overlay.querySelector('.restore-message').textContent = 'Reset successful! Device rebooting...';
+                        setTimeout(() => {
+                            overlay.style.display = 'none';
+                            alert('Device reset complete! It will reboot and start in AP mode. Connect to "Aquarium-Setup" WiFi to reconfigure.');
+                            setTimeout(() => {
+                                location.reload();
+                            }, 2000);
+                        }, 3000);
+                    } else {
+                        overlay.style.display = 'none';
+                        alert('Reset failed: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    overlay.style.display = 'none';
+                    alert('Reset failed: ' + error);
+                });
+        }
+
+        // Close modal when clicking outside of it
+        document.getElementById('resetModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeResetDialog();
+            }
+        });
     </script>
 </body>
 
